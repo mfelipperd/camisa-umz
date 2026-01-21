@@ -25,11 +25,11 @@ const SHIRTS = [
         colors: [
             { 
                 id: 'preta', 
-                images: ['/assets/standard_black.jpg'] 
+                images: ['/assets/standar-femina-preto-consta.png', '/assets/standar-preta-costa-feminina.png'] 
             },
             { 
                 id: 'branca', 
-                images: ['/assets/standard_white.jpg', '/assets/standard_white_v2.jpg'] 
+                images: ['/assets/standar-branca-feminina-frente.png', '/assets/standard-branca-femininca-costa.jpeg'] 
             }
         ]
     },
@@ -41,11 +41,11 @@ const SHIRTS = [
         colors: [
             { 
                 id: 'preta', 
-                images: ['https://images.unsplash.com/photo-1583743814966-8936f5b7be1a?q=80&w=1887&auto=format&fit=crop'] 
+                images: ['/assets/oversized_black_1.png', '/assets/oversized_black_2.png'] 
             },
             { 
                 id: 'branca', 
-                images: ['https://images.unsplash.com/photo-1521572163474-6864f9cf17ab?q=80&w=1780&auto=format&fit=crop'] 
+                images: ['/assets/oversized_white_1.jpg', '/assets/oversized_white_2.jpg'] 
             }
         ]
     },
