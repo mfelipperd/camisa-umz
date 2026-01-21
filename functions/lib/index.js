@@ -171,15 +171,46 @@ exports.webhook = functions.runWith({
         if (type === "payment") {
             const payment = new mercadopago_1.Payment(client);
             const paymentInfo = await payment.get({ id: data.id });
-            if (paymentInfo.status === 'approved') {
-                const orderId = paymentInfo.external_reference;
-                if (orderId) {
-                    await db.collection("orders").doc(orderId).update({
-                        status: 'approved',
-                        paymentId: data.id,
-                        paidAt: admin.firestore.FieldValue.serverTimestamp()
-                    });
-                }
+            console.log("Webhook received payment:", {
+                id: data.id,
+                status: paymentInfo.status,
+                external_reference: paymentInfo.external_reference
+            });
+            // Find orders with this paymentId
+            const ordersSnapshot = await db.collection("orders")
+                .where("paymentId", "==", String(data.id))
+                .get();
+            if (!ordersSnapshot.empty) {
+                const batch = db.batch();
+                ordersSnapshot.forEach(doc => {
+                    if (paymentInfo.status === 'approved') {
+                        batch.update(doc.ref, {
+                            status: 'approved',
+                            paymentStatus: 'approved',
+                            paidAt: admin.firestore.FieldValue.serverTimestamp(),
+                            updatedAt: admin.firestore.FieldValue.serverTimestamp()
+                        });
+                    }
+                    else if (paymentInfo.status === 'rejected') {
+                        batch.update(doc.ref, {
+                            status: 'rejected',
+                            paymentStatus: 'rejected',
+                            updatedAt: admin.firestore.FieldValue.serverTimestamp()
+                        });
+                    }
+                    else {
+                        // pending, in_process, etc
+                        batch.update(doc.ref, {
+                            paymentStatus: paymentInfo.status,
+                            updatedAt: admin.firestore.FieldValue.serverTimestamp()
+                        });
+                    }
+                });
+                await batch.commit();
+                console.log(`Updated ${ordersSnapshot.size} orders with payment ${data.id}`);
+            }
+            else {
+                console.log(`No orders found with paymentId ${data.id}`);
             }
         }
         res.status(200).send("OK");

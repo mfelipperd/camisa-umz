@@ -52,10 +52,14 @@ export function Checkout({ preferenceId, amount, orderId, onPaymentSuccess, onPa
             
             // If we have a payment ID, it was processed (even if pending)
             if (result.id) {
-                if (result.status === 'rejected') {
+                // Verificar se o status é válido para criar pedidos
+                const validStatuses = ['approved', 'pending', 'in_process', 'authorized'];
+                
+                if (!result.status || !validStatuses.includes(result.status)) {
+                    // Status inválido ou rejeição - não criar pedidos
                     onPaymentError(result);
                 } else {
-                    // approved, pending, in_process, authorized - all are valid
+                    // Status válido - pode criar pedidos
                     onPaymentSuccess(result);
                 }
             } else if (result.error) {
