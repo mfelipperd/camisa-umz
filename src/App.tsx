@@ -41,11 +41,11 @@ const SHIRTS = [
         colors: [
             { 
                 id: 'preta', 
-                images: ['/assets/oversized_black_1.png', '/assets/oversized_black_2.png'] 
+                images: ['/assets/over-masculina-preta-frente.png', '/assets/over-masculina-preta-costa.png'] 
             },
             { 
                 id: 'branca', 
-                images: ['/assets/oversized_white_1.jpg', '/assets/oversized_white_2.jpg'] 
+                images: ['/assets/over-femini-branca-frente.png', '/assets/over-masculina-branca-costa.png'] 
             }
         ]
     },
