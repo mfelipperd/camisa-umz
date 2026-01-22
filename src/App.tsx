@@ -18,18 +18,6 @@ import { Footer } from './components/Footer';
 
 const SHIRTS = [
     {
-        id: 'teste',
-        title: 'Teste R$ 1',
-        description: '⚡ PRODUTO DE TESTE - Apenas R$ 1,00 para testar o sistema de pagamento.',
-        price: 1.00,
-        colors: [
-            { 
-                id: 'preta', 
-                images: ['/assets/standar-femina-preto-consta.png', '/assets/standar-preta-costa-feminina.png'] 
-            }
-        ]
-    },
-    {
         id: 'normal',
         title: 'Camisa Standard',
         description: 'Corte tradicional, tecido 100% algodão penteado fio 30.1. Conforto e durabilidade para o dia a dia.',

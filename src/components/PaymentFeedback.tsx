@@ -115,7 +115,16 @@ export function PaymentFeedback({ isOpen, status, paymentId, message, onClose, p
                                     ⚠️ Importante:
                                 </p>
                                 <p className="text-zinc-300 text-xs leading-relaxed">
-                                    Após realizar o pagamento, envie o comprovante para o <strong className="text-white">Diretor Jovem</strong> para que ele confirme o pagamento na plataforma.
+                                    Após realizar o pagamento, envie o comprovante para a <strong className="text-white">Diretora Jovem</strong> para que ela confirme o pagamento na plataforma.
+                                </p>
+                            </div>
+
+                            <div className="mt-4 bg-primary/20 border-2 border-primary/50 rounded-xl p-4 animate-pulse">
+                                <p className="text-white font-black text-center text-sm">
+                                    🚀 VOCÊ TAMBÉM RECEBEU O CÓDIGO "CÓPIA E COLA" NO SEU E-MAIL!
+                                </p>
+                                <p className="text-zinc-200 text-center text-[10px] mt-1 font-bold italic">
+                                    Caso não consiga pagar agora, finalize pelo código enviado para o e-mail digitado.
                                 </p>
                             </div>
                         </div>
@@ -157,7 +166,7 @@ export function PaymentFeedback({ isOpen, status, paymentId, message, onClose, p
                                 </li>
                                 <li className="flex gap-2">
                                     <span className="text-primary">•</span>
-                                    <span>Em caso de dúvidas, entre em contato com o **Diretor Jovem da Igreja**.</span>
+                                    <span>Em caso de dúvidas, entre em contato com a **Diretora Jovem da Igreja**.</span>
                                 </li>
                             </ul>
                         </div>
