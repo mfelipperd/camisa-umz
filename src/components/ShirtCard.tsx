@@ -133,7 +133,8 @@ export function ShirtCard({ title, variations = [], description, price, onBuy }:
                             }`}
                         >
                             <div className={`w-4 h-4 rounded-full border border-white/20 ${
-                                variation.id === 'preta' ? 'bg-zinc-900' : 'bg-white'
+                                variation.id === 'preta' ? 'bg-zinc-900' : 
+                                variation.id === 'marrom' ? 'bg-[#5D4037]' : 'bg-white'
                             }`} />
                         </button>
                     ))}

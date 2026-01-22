@@ -30,6 +30,10 @@ const SHIRTS = [
             { 
                 id: 'branca', 
                 images: ['/assets/standar-branca-feminina-frente.png', '/assets/standard-branca-femininca-costa.jpeg'] 
+            },
+            {
+                id: 'marrom',
+                images: ['/assets/stand marrom frente.png', '/assets/stand marrom verso.png']
             }
         ]
     },
@@ -46,6 +50,10 @@ const SHIRTS = [
             { 
                 id: 'branca', 
                 images: ['/assets/over-femini-branca-frente.png', '/assets/over-masculina-branca-costa.png'] 
+            },
+            {
+                id: 'marrom',
+                images: ['/assets/over marrom frente.png', '/assets/over marrom costa.png']
             }
         ]
     },

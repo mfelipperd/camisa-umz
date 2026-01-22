@@ -13,14 +13,15 @@ interface PurchaseModalProps {
 const SIZES = ['P', 'M', 'G', 'GG', 'XG'];
 const COLORS = [
     { id: 'preta', label: 'Preta', bg: 'bg-zinc-900', ring: 'ring-zinc-500' },
-    { id: 'branca', label: 'Branca', bg: 'bg-white', ring: 'ring-white' }
+    { id: 'branca', label: 'Branca', bg: 'bg-white', ring: 'ring-white' },
+    { id: 'marrom', label: 'Marrom', bg: 'bg-[#5D4037]', ring: 'ring-[#5D4037]' }
 ];
 
 export function PurchaseModal({ isOpen, onClose, model, price }: PurchaseModalProps) {
     const { addItem, savedName } = useCart();
     const [name, setName] = useState(savedName);
-    const [size, setSize] = useState('M');
-    const [color, setColor] = useState('preta');
+    const [size, setSize] = useState<string | null>(null);
+    const [color, setColor] = useState<string | null>(null);
     const [gender, setGender] = useState<'masculino' | 'feminino' | null>(null);
     const [quantity, setQuantity] = useState(1);
     const [isSubmitting, setIsSubmitting] = useState(false);
@@ -40,16 +41,16 @@ export function PurchaseModal({ isOpen, onClose, model, price }: PurchaseModalPr
         addItem({
             name,
             model,
-            size,
-            color,
+            size: size!,
+            color: color!,
             gender: gender!,
             quantity,
             price
         });
 
         // Reset form (except name)
-        setSize('M');
-        setColor('preta');
+        setSize(null);
+        setColor(null);
         setGender(null);
         setQuantity(1);
         setIsSubmitting(false);
@@ -111,8 +112,7 @@ export function PurchaseModal({ isOpen, onClose, model, price }: PurchaseModalPr
                                                 : 'border-zinc-800 bg-zinc-800/50 text-zinc-500 hover:border-zinc-700'
                                             }`}
                                         >
-                                            <span className={`w-3.5 h-3.5 rounded-full ${c.bg} border border-zinc-600`}></span>
-                                            {c.label}
+                                            <span className={`w-6 h-6 rounded-full ${c.bg} border border-zinc-600`}></span>
                                         </button>
                                     ))}
                                 </div>
@@ -191,7 +191,7 @@ export function PurchaseModal({ isOpen, onClose, model, price }: PurchaseModalPr
 
                             <button 
                                 type="submit"
-                                disabled={isSubmitting || !name.trim() || !gender}
+                                disabled={isSubmitting || !name.trim() || !gender || !size || !color}
                                 className="w-full bg-primary hover:bg-orange-600 text-white font-black py-4 rounded-2xl mt-4 flex items-center justify-center gap-2 transition-all active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed shadow-xl shadow-primary/20"
                             >
                                 {isSubmitting ? (
