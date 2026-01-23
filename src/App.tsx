@@ -15,6 +15,8 @@ import { CartModal } from './components/CartModal';
 import { Checkout } from './components/Checkout';
 import { PaymentFeedback } from './components/PaymentFeedback';
 import { Footer } from './components/Footer';
+import { useSabbathMode } from './hooks/useSabbathMode';
+import { SabbathModal } from './components/SabbathModal';
 
 const SHIRTS = [
     {
@@ -85,6 +87,10 @@ function App() {
     const { items: cartItems, total: cartTotal, clearCart } = useCart();
     const [selectedShirt, setSelectedShirt] = useState<typeof SHIRTS[0] | null>(null);
     
+    // Sabbath Mode
+    const isSabbath = useSabbathMode();
+    const [isSabbathModalOpen, setIsSabbathModalOpen] = useState(false);
+    
     // Title and Rotating Favicon effect
     useState(() => {
         if (typeof document !== 'undefined') {
@@ -129,11 +135,20 @@ function App() {
     const TARGET = 10;
 
     const handleBuyClick = (shirt: typeof SHIRTS[0]) => {
+        if (isSabbath) {
+            setIsSabbathModalOpen(true);
+            return;
+        }
         setSelectedShirt(shirt);
         setIsModalOpen(true);
     };
 
     const handleCheckout = async () => {
+        if (isSabbath) {
+            setIsCartOpen(false);
+            setIsSabbathModalOpen(true);
+            return;
+        }
         if (cartItems.length === 0) return;
         setIsProcessing(true);
         
@@ -414,6 +429,11 @@ function App() {
                     onCancel={handleCancelCheckout}
                 />
             )}
+
+            <SabbathModal 
+                isOpen={isSabbathModalOpen} 
+                onClose={() => setIsSabbathModalOpen(false)} 
+            />
 
             <PaymentFeedback
                 isOpen={feedbackState.isOpen}

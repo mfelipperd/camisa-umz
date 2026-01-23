@@ -517,15 +517,22 @@ export function AdminPage() {
                                                     <td className="px-4 py-4 text-sm text-zinc-400 font-mono">{formatDate(order.createdAt)}</td>
                                                     <td className="px-4 py-4">
                                                         {order.status === 'pending' && (
-                                                            <button
-                                                                onClick={(e) => {
-                                                                    e.stopPropagation();
-                                                                    handleCheckStatus(order, e.currentTarget);
-                                                                }}
-                                                                className="px-3 py-1.5 bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold rounded-lg transition-all"
-                                                            >
-                                                                Verificar
-                                                            </button>
+                                                            <div className="flex flex-col items-end gap-1">
+                                                                <button
+                                                                    onClick={(e) => {
+                                                                        e.stopPropagation();
+                                                                        handleCheckStatus(order, e.currentTarget);
+                                                                    }}
+                                                                    className="px-3 py-1.5 bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold rounded-lg transition-all"
+                                                                >
+                                                                    Verificar
+                                                                </button>
+                                                                {order.paymentId && (
+                                                                     <span className="text-[10px] text-zinc-500 flex items-center gap-1">
+                                                                        <Clock size={10} /> Auto. em ~10min
+                                                                     </span>
+                                                                )}
+                                                            </div>
                                                         )}
                                                     </td>
                                                 </tr>
@@ -824,15 +831,22 @@ export function AdminPage() {
 
                                             <div className="pt-2">
                                                 {order.status === 'pending' && (
-                                                    <button
-                                                        onClick={(e) => {
-                                                            e.stopPropagation();
-                                                            handleCheckStatus(order, e.currentTarget);
-                                                        }}
-                                                        className="w-full py-3 bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold rounded-xl uppercase tracking-wider shadow-lg shadow-blue-500/20 mb-2"
-                                                    >
-                                                        Verificar Status
-                                                    </button>
+                                                    <div className="space-y-2 mb-2">
+                                                        <button
+                                                            onClick={(e) => {
+                                                                e.stopPropagation();
+                                                                handleCheckStatus(order, e.currentTarget);
+                                                            }}
+                                                            className="w-full py-3 bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold rounded-xl uppercase tracking-wider shadow-lg shadow-blue-500/20"
+                                                        >
+                                                            Verificar Status
+                                                        </button>
+                                                        {order.paymentId && (
+                                                            <div className="text-center text-[10px] text-zinc-500 flex items-center justify-center gap-1">
+                                                                <Clock size={12} /> Verificação automática agendada para ~10min após pedido
+                                                            </div>
+                                                        )}
+                                                    </div>
                                                 )}
                                                 {order.status === 'approved' && (
                                                     <div className="w-full">

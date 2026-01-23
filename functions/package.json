@@ -13,10 +13,11 @@
   },
   "main": "lib/index.js",
   "dependencies": {
+    "@google-cloud/tasks": "^6.2.1",
+    "cors": "^2.8.5",
     "firebase-admin": "^11.5.0",
     "firebase-functions": "^4.3.1",
-    "mercadopago": "^2.0.0",
-    "cors": "^2.8.5"
+    "mercadopago": "^2.0.0"
   },
   "devDependencies": {
     "@types/cors": "^2.8.17",
