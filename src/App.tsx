@@ -93,14 +93,17 @@ function App() {
     const [isSabbathModalOpen, setIsSabbathModalOpen] = useState(false);
     
     // Title and Rotating Favicon effect
-    useState(() => {
-        if (typeof document !== 'undefined') {
-            document.title = "UMZ Store";
-        }
-    });
+    // Title Effect
+    useEffect(() => {
+        document.title = "UMZ Store";
+    }, []);
 
-    useState(() => {
+    // Rotating Favicon Effect
+    useEffect(() => {
+        let animationFrameId: number;
+        let timeoutId: any;
         let rotation = 0;
+        
         const canvas = document.createElement('canvas');
         canvas.width = 64;
         canvas.height = 64;
@@ -111,7 +114,7 @@ function App() {
 
         const animate = () => {
             if (!ctx || !img.complete) {
-                requestAnimationFrame(animate);
+                animationFrameId = requestAnimationFrame(animate);
                 return;
             }
             ctx.clearRect(0, 0, 64, 64);
@@ -126,11 +129,20 @@ function App() {
             }
             
             rotation = (rotation + 0.5) % 360; // Slow rotation
-            setTimeout(() => requestAnimationFrame(animate), 100); // Throttled for performance
+            
+            // Throttled for performance
+            timeoutId = setTimeout(() => {
+                animationFrameId = requestAnimationFrame(animate);
+            }, 100); 
         };
 
         img.onload = () => animate();
-    });
+
+        return () => {
+            if (timeoutId) clearTimeout(timeoutId);
+            if (animationFrameId) cancelAnimationFrame(animationFrameId);
+        };
+    }, []);
 
     const totalSold = buyers.reduce((acc, curr) => acc + curr.quantity, 0);
     const TARGET = 10;
