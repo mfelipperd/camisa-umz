@@ -17,6 +17,7 @@ import { PaymentFeedback } from './components/PaymentFeedback';
 import { Footer } from './components/Footer';
 import { useSabbathMode } from './hooks/useSabbathMode';
 import { SabbathModal } from './components/SabbathModal';
+import { NotificationPermission } from './components/NotificationPermission';
 
 const SHIRTS = [
     {
@@ -434,6 +435,8 @@ function App() {
                 isOpen={isSabbathModalOpen} 
                 onClose={() => setIsSabbathModalOpen(false)} 
             />
+
+            <NotificationPermission />
 
             <PaymentFeedback
                 isOpen={feedbackState.isOpen}

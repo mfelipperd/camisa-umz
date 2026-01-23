@@ -2,6 +2,7 @@ import { initializeApp } from "firebase/app";
 import { getFirestore } from "firebase/firestore";
 import { getFunctions } from "firebase/functions";
 import { initializeAppCheck, ReCaptchaEnterpriseProvider } from "firebase/app-check";
+import { getMessaging } from "firebase/messaging";
 
 const firebaseConfig = {
   apiKey: "AIzaSyAdMETY8mtSZT9pyuMFW9vc050mh9U9OpA",
@@ -26,5 +27,7 @@ if (typeof window !== 'undefined') {
     });
 }
 
+
 export const db = getFirestore(app);
 export const functions = getFunctions(app);
+export const messaging = typeof window !== 'undefined' ? getMessaging(app) : null;
