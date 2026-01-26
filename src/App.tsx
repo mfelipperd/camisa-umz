@@ -18,6 +18,8 @@ import { Footer } from './components/Footer';
 import { useSabbathMode } from './hooks/useSabbathMode';
 import { SabbathModal } from './components/SabbathModal';
 import { NotificationPermission } from './components/NotificationPermission';
+import { SizeGuideModal } from './components/SizeGuideModal';
+import { Ruler } from 'lucide-react';
 
 const SHIRTS = [
     {
@@ -91,6 +93,7 @@ function App() {
     // Sabbath Mode
     const isSabbath = useSabbathMode();
     const [isSabbathModalOpen, setIsSabbathModalOpen] = useState(false);
+    const [isSizeGuideModalOpen, setIsSizeGuideModalOpen] = useState(false);
     
     // Title and Rotating Favicon effect
     // Title Effect
@@ -456,6 +459,29 @@ function App() {
                 paymentId={feedbackState.paymentId}
                 message={feedbackState.message}
                 onClose={handleCloseFeedback}
+            />
+
+            {/* Floating Size Guide Button */}
+            <motion.button
+                initial={{ scale: 0, opacity: 0 }}
+                animate={{ scale: 1, opacity: 1 }}
+                whileHover={{ scale: 1.1 }}
+                whileTap={{ scale: 0.9 }}
+                onClick={() => setIsSizeGuideModalOpen(true)}
+                className="fixed bottom-6 right-6 z-[60] bg-zinc-900/80 backdrop-blur-xl border border-zinc-800 p-4 rounded-3xl shadow-2xl flex items-center gap-3 group overflow-hidden"
+            >
+                <div className="absolute inset-x-0 bottom-0 h-1 bg-primary scale-x-0 group-hover:scale-x-100 transition-transform origin-left" />
+                <div className="p-2 bg-primary/10 rounded-xl group-hover:bg-primary/20 transition-colors">
+                    <Ruler size={20} className="text-primary" />
+                </div>
+                <span className="text-xs font-black uppercase text-zinc-300 group-hover:text-white transition-colors mr-1">
+                    Qual meu tamanho?
+                </span>
+            </motion.button>
+
+            <SizeGuideModal 
+                isOpen={isSizeGuideModalOpen}
+                onClose={() => setIsSizeGuideModalOpen(false)}
             />
         </div>
     );

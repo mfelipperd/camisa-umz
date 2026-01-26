@@ -1,7 +1,8 @@
 import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { X, ShoppingCart } from 'lucide-react';
+import { X, ShoppingCart, Ruler } from 'lucide-react';
 import { useCart } from '../contexts/CartContext';
+import { SizeGuide } from './SizeGuide';
 
 interface PurchaseModalProps {
     isOpen: boolean;
@@ -25,6 +26,7 @@ export function PurchaseModal({ isOpen, onClose, model, price }: PurchaseModalPr
     const [gender, setGender] = useState<'masculino' | 'feminino' | null>(null);
     const [quantity, setQuantity] = useState(1);
     const [isSubmitting, setIsSubmitting] = useState(false);
+    const [showSizeGuide, setShowSizeGuide] = useState(false);
 
     // Update name if savedName changes or modal opens
     useEffect(() => {
@@ -148,7 +150,17 @@ export function PurchaseModal({ isOpen, onClose, model, price }: PurchaseModalPr
 
                             <div className="grid grid-cols-2 gap-4">
                                 <div className="col-span-2 sm:col-span-1">
-                                    <label className="block text-xs font-bold text-zinc-500 uppercase mb-2 ml-1">Tamanho</label>
+                                    <div className="flex items-center justify-between mb-2 ml-1">
+                                        <label className="block text-xs font-bold text-zinc-500 uppercase">Tamanho</label>
+                                        <button 
+                                            type="button"
+                                            onClick={() => setShowSizeGuide(!showSizeGuide)}
+                                            className="flex items-center gap-1.5 text-[10px] font-black text-primary hover:text-orange-400 transition-colors uppercase tracking-wider"
+                                        >
+                                            <Ruler size={12} />
+                                            Guia
+                                        </button>
+                                    </div>
                                     <div className="flex gap-2 flex-wrap sm:grid sm:grid-cols-3">
                                         {SIZES.map(s => (
                                             <button
@@ -203,6 +215,16 @@ export function PurchaseModal({ isOpen, onClose, model, price }: PurchaseModalPr
                                     </>
                                 )}
                             </button>
+
+                            <AnimatePresence>
+                                {showSizeGuide && (
+                                    <SizeGuide 
+                                        model={model}
+                                        gender={gender}
+                                        onClose={() => setShowSizeGuide(false)}
+                                    />
+                                )}
+                            </AnimatePresence>
                         </form>
                     </motion.div>
                 </div>
