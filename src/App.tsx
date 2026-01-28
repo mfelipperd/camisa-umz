@@ -245,6 +245,7 @@ function App() {
                     size: item.size,
                     color: item.color,
                     gender: item.gender,
+                    phone: item.phone,
                     quantity: item.quantity,
                     status: status
                 }, item.price * item.quantity, paymentId)

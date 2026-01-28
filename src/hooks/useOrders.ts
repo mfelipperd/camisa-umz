@@ -9,6 +9,7 @@ export interface Order {
     size: string;
     color?: string;
     gender?: 'masculino' | 'feminino';
+    phone?: string;
     quantity: number;
     status: 'pending' | 'approved' | 'rejected' | 'delivered';
     deliveredAt?: any;

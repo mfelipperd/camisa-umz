@@ -493,6 +493,7 @@ export function AdminPage() {
                                             <tr>
                                                 <th className="px-4 py-3 text-left text-xs font-medium text-zinc-400 uppercase">Nome</th>
                                                 <th className="px-4 py-3 text-left text-xs font-medium text-zinc-400 uppercase">Modelo</th>
+                                                <th className="px-4 py-3 text-left text-xs font-medium text-zinc-400 uppercase">WhatsApp</th>
                                                 <th className="px-4 py-3 text-left text-xs font-medium text-zinc-400 uppercase">Cor</th>
                                                 <th className="px-4 py-3 text-left text-xs font-medium text-zinc-400 uppercase">Tamanho</th>
                                                 <th className="px-4 py-3 text-left text-xs font-medium text-zinc-400 uppercase">Qtd</th>
@@ -517,6 +518,19 @@ export function AdminPage() {
                                                 >
                                                     <td className="px-4 py-4 text-sm font-medium text-white">{order.name}</td>
                                                     <td className="px-4 py-4 text-sm text-zinc-300">{order.model}</td>
+                                                    <td className="px-4 py-4 text-sm text-zinc-300">
+                                                        {order.phone ? (
+                                                            <a 
+                                                                href={`https://wa.me/55${order.phone.replace(/\D/g, '')}?text=${encodeURIComponent(`Olá ${order.name.split(' ')[0]}, sua camisa UMZ já está pronta! Pode vir retirar.`)}`}
+                                                                target="_blank"
+                                                                rel="noopener noreferrer"
+                                                                onClick={(e) => e.stopPropagation()}
+                                                                className="text-emerald-400 hover:text-emerald-300 font-bold underline"
+                                                            >
+                                                                {order.phone}
+                                                            </a>
+                                                        ) : '-'}
+                                                    </td>
                                                     <td className="px-4 py-4 text-sm text-zinc-300 capitalize">{order.color || '-'}</td>
                                                     <td className="px-4 py-4 text-sm text-zinc-300">{order.size}</td>
                                                     <td className="px-4 py-4 text-sm text-zinc-300">{order.quantity}</td>
@@ -708,6 +722,7 @@ export function AdminPage() {
                                         <tr>
                                             <th className="px-4 py-3 text-left text-xs font-medium text-zinc-400 uppercase">Nome</th>
                                             <th className="px-4 py-3 text-left text-xs font-medium text-zinc-400 uppercase">Modelo</th>
+                                            <th className="px-4 py-3 text-left text-xs font-medium text-zinc-400 uppercase">WhatsApp</th>
                                             <th className="px-4 py-3 text-left text-xs font-medium text-zinc-400 uppercase">Cor</th>
                                             <th className="px-4 py-3 text-left text-xs font-medium text-zinc-400 uppercase">Tamanho</th>
                                             <th className="px-4 py-3 text-left text-xs font-medium text-zinc-400 uppercase">Status</th>
@@ -725,6 +740,19 @@ export function AdminPage() {
                                                     <tr className="hover:bg-zinc-800/30 transition-colors">
                                                         <td className="px-4 py-4 text-sm font-medium text-white">{order.name}</td>
                                                         <td className="px-4 py-4 text-sm text-zinc-300">{order.model}</td>
+                                                        <td className="px-4 py-4 text-sm text-zinc-300">
+                                                            {order.phone ? (
+                                                                <a 
+                                                                    href={`https://wa.me/55${order.phone.replace(/\D/g, '')}?text=${encodeURIComponent(`Olá ${order.name.split(' ')[0]}, sua camisa UMZ já está pronta! Pode vir retirar.`)}`}
+                                                                    target="_blank"
+                                                                    rel="noopener noreferrer"
+                                                                    onClick={(e) => e.stopPropagation()}
+                                                                    className="text-emerald-400 hover:text-emerald-300 font-bold underline"
+                                                                >
+                                                                    {order.phone}
+                                                                </a>
+                                                            ) : '-'}
+                                                        </td>
                                                         <td className="px-4 py-4 text-sm text-zinc-300 capitalize">{order.color || '-'}</td>
                                                         <td className="px-4 py-4 text-sm text-zinc-300">{order.size} (x{order.quantity})</td>
                                                         <td className="px-4 py-4">{getStatusBadge(order.status)}</td>
@@ -824,7 +852,7 @@ export function AdminPage() {
                                                 <div className="min-w-0 pr-2">
                                                     <p className="text-white font-bold truncate">{order.name}</p>
                                                     <p className="text-zinc-500 text-[10px] font-black uppercase tracking-widest mt-0.5">
-                                                        {order.model} • {order.gender} • {order.size}
+                                                        {order.model} • {order.size} {order.phone && `• ${order.phone}`}
                                                     </p>
                                                 </div>
                                                 <div className="flex-shrink-0">
@@ -960,15 +988,14 @@ export function AdminPage() {
                                 </div>
 
                                 <div>
-                                    <label className="block text-[10px] font-black uppercase tracking-widest text-zinc-500 mb-2 ml-1">Gênero</label>
-                                    <select
-                                        value={editingOrder.gender}
-                                        onChange={(e) => setEditingOrder({ ...editingOrder, gender: e.target.value as any })}
-                                        className="w-full bg-zinc-800 border border-zinc-700 rounded-xl px-4 py-3 text-white focus:ring-2 focus:ring-primary outline-none"
-                                    >
-                                        <option value="masculino">Masculino</option>
-                                        <option value="feminino">Feminino</option>
-                                    </select>
+                                    <label className="block text-[10px] font-black uppercase tracking-widest text-zinc-500 mb-2 ml-1">WhatsApp</label>
+                                    <input
+                                        type="tel"
+                                        required
+                                        value={editingOrder.phone || ''}
+                                        onChange={(e) => setEditingOrder({ ...editingOrder, phone: e.target.value })}
+                                        className="w-full bg-zinc-800 border border-zinc-700 rounded-xl px-4 py-3 text-white focus:ring-2 focus:ring-primary focus:border-transparent outline-none transition-all"
+                                    />
                                 </div>
 
                                 <div>

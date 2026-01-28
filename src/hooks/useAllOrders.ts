@@ -9,6 +9,7 @@ export interface AdminOrder {
     size: string;
     color?: string;
     gender?: 'masculino' | 'feminino';
+    phone?: string;
     quantity: number;
     price: number;
     status: 'pending' | 'approved' | 'rejected' | 'delivered';

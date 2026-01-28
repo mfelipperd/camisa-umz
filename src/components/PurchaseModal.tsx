@@ -23,6 +23,7 @@ export function PurchaseModal({ isOpen, onClose, model, price }: PurchaseModalPr
     const [name, setName] = useState(savedName);
     const [size, setSize] = useState<string | null>(null);
     const [color, setColor] = useState<string | null>(null);
+    const [phone, setPhone] = useState('');
     const gender = 'masculino'; // Default to standard
     const [quantity, setQuantity] = useState(1);
     const [isSubmitting, setIsSubmitting] = useState(false);
@@ -46,6 +47,7 @@ export function PurchaseModal({ isOpen, onClose, model, price }: PurchaseModalPr
             size: size!,
             color: color!,
             gender: gender!,
+            phone,
             quantity,
             price
         });
@@ -53,6 +55,7 @@ export function PurchaseModal({ isOpen, onClose, model, price }: PurchaseModalPr
         // Reset form (except name)
         setSize(null);
         setColor(null);
+        setPhone('');
         setQuantity(1);
         setIsSubmitting(false);
         onClose();
@@ -96,6 +99,18 @@ export function PurchaseModal({ isOpen, onClose, model, price }: PurchaseModalPr
                                     onChange={(e) => setName(e.target.value)}
                                     className="w-full bg-zinc-800 border border-zinc-700 rounded-xl px-4 py-3 text-base text-white focus:ring-2 focus:ring-primary focus:border-transparent outline-none transition-all placeholder-zinc-600"
                                     placeholder="Ex: Felipe Silva"
+                                />
+                            </div>
+
+                            <div>
+                                <label className="block text-xs font-bold text-zinc-500 uppercase mb-1.5 ml-1">WhatsApp</label>
+                                <input 
+                                    type="tel" 
+                                    required
+                                    value={phone}
+                                    onChange={(e) => setPhone(e.target.value)}
+                                    className="w-full bg-zinc-800 border border-zinc-700 rounded-xl px-4 py-3 text-base text-white focus:ring-2 focus:ring-primary focus:border-transparent outline-none transition-all placeholder-zinc-600"
+                                    placeholder="Ex: 91981234567"
                                 />
                             </div>
 
@@ -175,7 +190,7 @@ export function PurchaseModal({ isOpen, onClose, model, price }: PurchaseModalPr
 
                             <button 
                                 type="submit"
-                                disabled={isSubmitting || !name.trim() || !size || !color}
+                                disabled={isSubmitting || !name.trim() || !phone.trim() || !size || !color}
                                 className="w-full bg-primary hover:bg-orange-600 text-white font-black py-4 rounded-2xl mt-4 flex items-center justify-center gap-2 transition-all active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed shadow-xl shadow-primary/20"
                             >
                                 {isSubmitting ? (

@@ -10,6 +10,7 @@ export interface CartItem {
     size: string;
     color: string;
     gender: 'masculino' | 'feminino';
+    phone: string;
     quantity: number;
     price: number;
 }
