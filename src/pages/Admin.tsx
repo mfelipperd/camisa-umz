@@ -148,8 +148,20 @@ export function AdminPage() {
     const handleCompleteBatch = async () => {
         setIsCompleting(true);
         const adminCode = sessionStorage.getItem('admin_auth_code');
-        const appCheckTokenResponse = appCheck ? await getToken(appCheck) : null;
-        const appCheckToken = appCheckTokenResponse?.token;
+        
+        // Try to get App Check token, but don't fail if it errors
+        let appCheckToken = '';
+        if (appCheck) {
+            try {
+                const appCheckTokenResponse = await getToken(appCheck);
+                appCheckToken = appCheckTokenResponse?.token || '';
+                console.log('App Check token obtained successfully');
+            } catch (error) {
+                console.warn('Failed to get App Check token:', error);
+                console.warn('Continuing without App Check token');
+                // Continue without token - backend will handle it
+            }
+        }
 
         try {
             const response = await fetch('https://us-central1-camisa-umz.cloudfunctions.net/completeBatch', {
@@ -481,7 +493,6 @@ export function AdminPage() {
                                             <tr>
                                                 <th className="px-4 py-3 text-left text-xs font-medium text-zinc-400 uppercase">Nome</th>
                                                 <th className="px-4 py-3 text-left text-xs font-medium text-zinc-400 uppercase">Modelo</th>
-                                                <th className="px-4 py-3 text-left text-xs font-medium text-zinc-400 uppercase">Mod.</th>
                                                 <th className="px-4 py-3 text-left text-xs font-medium text-zinc-400 uppercase">Cor</th>
                                                 <th className="px-4 py-3 text-left text-xs font-medium text-zinc-400 uppercase">Tamanho</th>
                                                 <th className="px-4 py-3 text-left text-xs font-medium text-zinc-400 uppercase">Qtd</th>
@@ -506,7 +517,6 @@ export function AdminPage() {
                                                 >
                                                     <td className="px-4 py-4 text-sm font-medium text-white">{order.name}</td>
                                                     <td className="px-4 py-4 text-sm text-zinc-300">{order.model}</td>
-                                                    <td className="px-4 py-4 text-sm text-zinc-300 capitalize">{order.gender || '-'}</td>
                                                     <td className="px-4 py-4 text-sm text-zinc-300 capitalize">{order.color || '-'}</td>
                                                     <td className="px-4 py-4 text-sm text-zinc-300">{order.size}</td>
                                                     <td className="px-4 py-4 text-sm text-zinc-300">{order.quantity}</td>
@@ -698,7 +708,6 @@ export function AdminPage() {
                                         <tr>
                                             <th className="px-4 py-3 text-left text-xs font-medium text-zinc-400 uppercase">Nome</th>
                                             <th className="px-4 py-3 text-left text-xs font-medium text-zinc-400 uppercase">Modelo</th>
-                                            <th className="px-4 py-3 text-left text-xs font-medium text-zinc-400 uppercase">Mod.</th>
                                             <th className="px-4 py-3 text-left text-xs font-medium text-zinc-400 uppercase">Cor</th>
                                             <th className="px-4 py-3 text-left text-xs font-medium text-zinc-400 uppercase">Tamanho</th>
                                             <th className="px-4 py-3 text-left text-xs font-medium text-zinc-400 uppercase">Status</th>
@@ -716,7 +725,6 @@ export function AdminPage() {
                                                     <tr className="hover:bg-zinc-800/30 transition-colors">
                                                         <td className="px-4 py-4 text-sm font-medium text-white">{order.name}</td>
                                                         <td className="px-4 py-4 text-sm text-zinc-300">{order.model}</td>
-                                                        <td className="px-4 py-4 text-sm text-zinc-300 capitalize">{order.gender || '-'}</td>
                                                         <td className="px-4 py-4 text-sm text-zinc-300 capitalize">{order.color || '-'}</td>
                                                         <td className="px-4 py-4 text-sm text-zinc-300">{order.size} (x{order.quantity})</td>
                                                         <td className="px-4 py-4">{getStatusBadge(order.status)}</td>

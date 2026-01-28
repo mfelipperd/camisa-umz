@@ -23,7 +23,7 @@ export function PurchaseModal({ isOpen, onClose, model, price }: PurchaseModalPr
     const [name, setName] = useState(savedName);
     const [size, setSize] = useState<string | null>(null);
     const [color, setColor] = useState<string | null>(null);
-    const [gender, setGender] = useState<'masculino' | 'feminino' | null>(null);
+    const gender = 'masculino'; // Default to standard
     const [quantity, setQuantity] = useState(1);
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [showSizeGuide, setShowSizeGuide] = useState(false);
@@ -53,7 +53,6 @@ export function PurchaseModal({ isOpen, onClose, model, price }: PurchaseModalPr
         // Reset form (except name)
         setSize(null);
         setColor(null);
-        setGender(null);
         setQuantity(1);
         setIsSubmitting(false);
         onClose();
@@ -120,33 +119,6 @@ export function PurchaseModal({ isOpen, onClose, model, price }: PurchaseModalPr
                                 </div>
                             </div>
 
-                            <div>
-                                <label className="block text-xs font-bold text-zinc-500 uppercase mb-2 ml-1">Gênero</label>
-                                <div className="flex gap-3">
-                                    <button
-                                        type="button"
-                                        onClick={() => setGender('masculino')}
-                                        className={`flex-1 flex items-center justify-center py-3 rounded-xl border-2 transition-all touch-manipulation font-bold text-sm ${
-                                            gender === 'masculino' 
-                                            ? 'border-primary bg-primary text-white shadow-lg shadow-primary/20' 
-                                            : 'border-zinc-800 bg-zinc-800/50 text-zinc-500 hover:border-zinc-700'
-                                        }`}
-                                    >
-                                        Masculino
-                                    </button>
-                                    <button
-                                        type="button"
-                                        onClick={() => setGender('feminino')}
-                                        className={`flex-1 flex items-center justify-center py-3 rounded-xl border-2 transition-all touch-manipulation font-bold text-sm ${
-                                            gender === 'feminino' 
-                                            ? 'border-primary bg-primary text-white shadow-lg shadow-primary/20' 
-                                            : 'border-zinc-800 bg-zinc-800/50 text-zinc-500 hover:border-zinc-700'
-                                        }`}
-                                    >
-                                        Feminino
-                                    </button>
-                                </div>
-                            </div>
 
                             <div className="grid grid-cols-2 gap-4">
                                 <div className="col-span-2 sm:col-span-1">
@@ -203,7 +175,7 @@ export function PurchaseModal({ isOpen, onClose, model, price }: PurchaseModalPr
 
                             <button 
                                 type="submit"
-                                disabled={isSubmitting || !name.trim() || !gender || !size || !color}
+                                disabled={isSubmitting || !name.trim() || !size || !color}
                                 className="w-full bg-primary hover:bg-orange-600 text-white font-black py-4 rounded-2xl mt-4 flex items-center justify-center gap-2 transition-all active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed shadow-xl shadow-primary/20"
                             >
                                 {isSubmitting ? (
@@ -220,7 +192,6 @@ export function PurchaseModal({ isOpen, onClose, model, price }: PurchaseModalPr
                                 {showSizeGuide && (
                                     <SizeGuide 
                                         model={model}
-                                        gender={gender}
                                         onClose={() => setShowSizeGuide(false)}
                                     />
                                 )}

@@ -48,7 +48,6 @@ export function SizeTable({ title, rows, showSleeve }: SizeTableProps) {
 
 interface SizeGuideProps {
     model: string;
-    gender: 'masculino' | 'feminino' | null;
     onClose: () => void;
 }
 
@@ -70,35 +69,12 @@ export const NORMAL_DATA: SizeRow[] = [
     { size: 'XG', alt: '78', larg: '63', sleeve: '-' },
 ];
 
-export const BABYLOOK_DATA: SizeRow[] = [
-    { size: 'PP', alt: '60', larg: '41', sleeve: '-' },
-    { size: 'P', alt: '63', larg: '45', sleeve: '-' },
-    { size: 'M', alt: '65', larg: '49', sleeve: '-' },
-    { size: 'G', alt: '68', larg: '53', sleeve: '-' },
-    { size: 'GG', alt: '69', larg: '57', sleeve: '-' },
-    { size: 'XG', alt: '70', larg: '61', sleeve: '-' },
-];
-
-export function SizeGuide({ model, gender, onClose }: SizeGuideProps) {
+export function SizeGuide({ model, onClose }: SizeGuideProps) {
     const isOversized = model.toLowerCase().includes('oversized');
-    const isNormal = !isOversized && gender === 'masculino';
-    const isBabylook = !isOversized && gender === 'feminino';
 
-    let currentRows = OVERSIZED_DATA;
-    let tableTitle = 'Tabela de Medidas: Oversized';
-    let showSleeve = true;
-
-    if (isNormal) {
-        currentRows = NORMAL_DATA;
-        tableTitle = 'Tabela de Medidas: Standard Masculina';
-    } else if (isBabylook) {
-        currentRows = BABYLOOK_DATA;
-        tableTitle = 'Tabela de Medidas: Babylook Feminina';
-        showSleeve = false;
-    } 
-else if (!isOversized && !gender) {
-        tableTitle = 'Selecione o gênero para ver as medidas';
-    }
+    let currentRows = isOversized ? OVERSIZED_DATA : NORMAL_DATA;
+    let tableTitle = isOversized ? 'Tabela de Medidas: Oversized' : 'Tabela de Medidas: Standard';
+    let showSleeve = isOversized;
 
     return (
         <motion.div
@@ -120,15 +96,8 @@ else if (!isOversized && !gender) {
                 </button>
             </div>
 
-            {(!isOversized && !gender) ? (
-                <div className="bg-zinc-800/30 rounded-2xl p-6 border border-dashed border-zinc-700 text-center">
-                    <p className="text-zinc-500 text-sm font-medium">
-                        Por favor, selecione o **Gênero** acima para visualizar as medidas corretas do modelo `{model}`.
-                    </p>
-                </div>
-            ) : (
-                <SizeTable title={tableTitle} rows={currentRows} showSleeve={showSleeve} />
-            )}
+            <SizeTable title={tableTitle} rows={currentRows} showSleeve={showSleeve} />
         </motion.div>
     );
 }
+

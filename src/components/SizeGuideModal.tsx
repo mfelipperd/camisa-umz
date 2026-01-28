@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { X, Ruler, BookOpen, Check } from 'lucide-react';
-import { SizeTable, OVERSIZED_DATA, NORMAL_DATA, BABYLOOK_DATA } from './SizeGuide';
+import { SizeTable, OVERSIZED_DATA, NORMAL_DATA } from './SizeGuide';
 
 interface SizeGuideModalProps {
     isOpen: boolean;
@@ -81,9 +81,8 @@ export function SizeGuideModal({ isOpen, onClose }: SizeGuideModalProps) {
                                 exit={{ opacity: 0, x: 10 }}
                                 className="space-y-10"
                             >
-                                <SizeTable title="Street Oversized (Unissex)" rows={OVERSIZED_DATA} showSleeve={true} />
-                                <SizeTable title="Camisa Standard (Masculina)" rows={NORMAL_DATA} showSleeve={false} />
-                                <SizeTable title="Babylook (Feminina)" rows={BABYLOOK_DATA} showSleeve={false} />
+                                <SizeTable title="Street Oversized" rows={OVERSIZED_DATA} showSleeve={true} />
+                                <SizeTable title="Camisa Standard" rows={NORMAL_DATA} showSleeve={false} />
                             </motion.div>
                         )}
 

@@ -68,7 +68,7 @@ export function CartModal({ isOpen, onClose, onCheckout, isProcessing = false }:
                                             <div className="flex-1 min-w-0">
                                                 <p className="text-white font-bold truncate">{item.model}</p>
                                                 <p className="text-zinc-500 text-xs font-medium uppercase tracking-wider mb-2">
-                                                    {item.gender} • {item.color} • {item.size} • {item.name.split(' ')[0]}
+                                                    {item.color} • {item.size} • {item.name.split(' ')[0]}
                                                 </p>
                                                 <p className="text-primary font-black text-lg">
                                                     R$ {(item.price * item.quantity).toFixed(2)}

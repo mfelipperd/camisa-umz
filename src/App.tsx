@@ -174,7 +174,7 @@ function App() {
 
             // Create payment preference for all items
             const paymentItems = cartItems.map(item => ({
-                title: `${item.model} (${item.gender}) - ${item.color} - ${item.size}`,
+                title: `${item.model} - ${item.color} - ${item.size}`,
                 unit_price: item.price,
                 quantity: item.quantity,
             }));
