@@ -19,7 +19,10 @@ import { useSabbathMode } from './hooks/useSabbathMode';
 import { SabbathModal } from './components/SabbathModal';
 import { NotificationPermission } from './components/NotificationPermission';
 import { SizeGuideModal } from './components/SizeGuideModal';
+import { SuspendedSalesModal } from './components/SuspendedSalesModal';
 import { Ruler } from 'lucide-react';
+
+const SALES_SUSPENDED = true;
 
 const SHIRTS = [
     {
@@ -93,6 +96,7 @@ function App() {
     // Sabbath Mode
     const isSabbath = useSabbathMode();
     const [isSabbathModalOpen, setIsSabbathModalOpen] = useState(false);
+    const [isSuspendedModalOpen, setIsSuspendedModalOpen] = useState(false);
     const [isSizeGuideModalOpen, setIsSizeGuideModalOpen] = useState(false);
     
     // Title and Rotating Favicon effect
@@ -151,6 +155,10 @@ function App() {
     const TARGET = 10;
 
     const handleBuyClick = (shirt: typeof SHIRTS[0]) => {
+        if (SALES_SUSPENDED) {
+            setIsSuspendedModalOpen(true);
+            return;
+        }
         if (isSabbath) {
             setIsSabbathModalOpen(true);
             return;
@@ -340,8 +348,8 @@ function App() {
                 />
             </div>
 
-            <Header onCartClick={() => setIsCartOpen(true)} />
-            <Hero />
+            <Header onCartClick={() => SALES_SUSPENDED ? setIsSuspendedModalOpen(true) : setIsCartOpen(true)} />
+            <Hero onActionClick={() => setIsSuspendedModalOpen(true)} isSuspended={SALES_SUSPENDED} />
             
             <main className="container mx-auto px-4 -mt-16 md:-mt-20 relative z-20 space-y-16 md:space-y-24 pb-20">
                 <section id="loja">
@@ -363,6 +371,7 @@ function App() {
                                 variations={shirt.colors}
                                 price={shirt.price}
                                 onBuy={() => handleBuyClick(shirt)}
+                                isSuspended={SALES_SUSPENDED}
                             />
                         ))}
                     </div>
@@ -450,6 +459,11 @@ function App() {
             <SabbathModal 
                 isOpen={isSabbathModalOpen} 
                 onClose={() => setIsSabbathModalOpen(false)} 
+            />
+
+            <SuspendedSalesModal 
+                isOpen={isSuspendedModalOpen} 
+                onClose={() => setIsSuspendedModalOpen(false)} 
             />
 
             <NotificationPermission />

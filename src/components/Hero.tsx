@@ -1,7 +1,12 @@
 import { ArrowRight } from 'lucide-react';
 import { motion } from 'framer-motion';
 
-export function Hero() {
+interface HeroProps {
+    onActionClick?: () => void;
+    isSuspended?: boolean;
+}
+
+export function Hero({ onActionClick, isSuspended }: HeroProps) {
     return (
         <section className="relative h-[85vh] md:h-[80vh] flex items-center justify-center overflow-hidden">
             {/* Background elements */}
@@ -20,21 +25,37 @@ export function Hero() {
                         Edição 2026 • Umarizal
                     </span>
                     <h1 className="text-4xl md:text-7xl font-bold text-white tracking-tight mb-6 leading-[1.1]">
-                        Vista o Orgulho <br />
-                        <span className="text-transparent bg-clip-text bg-gradient-to-r from-orange-400 to-red-600">
-                            De Ser Umarizal
-                        </span>
+                        {isSuspended ? (
+                            <>
+                                Vendas <br />
+                                <span className="text-transparent bg-clip-text bg-gradient-to-r from-red-400 to-red-700">
+                                    Offline agora
+                                </span>
+                            </>
+                        ) : (
+                            <>
+                                Vista o Orgulho <br />
+                                <span className="text-transparent bg-clip-text bg-gradient-to-r from-orange-400 to-red-600">
+                                    De Ser Umarizal
+                                </span>
+                            </>
+                        )}
                     </h1>
                     <p className="text-zinc-400 text-base md:text-xl max-w-2xl mx-auto mb-10 leading-relaxed px-4">
-                        A nova coleção chegou. Modelos exclusivos com qualidade premium.
-                        Garanta a sua antes que o pedido feche.
+                        {isSuspended ? 
+                            "O canal de vendas das Camisas OFICIAIS não é mais o site. Clique abaixo para saber como adquirir a sua." :
+                            "A nova coleção chegou. Modelos exclusivos com qualidade premium. Garanta a sua antes que o pedido feche."
+                        }
                     </p>
                     
                     <div className="flex flex-col sm:flex-row gap-4 justify-center">
-                        <a href="#loja" className="bg-primary hover:bg-orange-600 text-white px-8 py-4 rounded-xl font-bold text-lg transition-all flex items-center justify-center gap-2 group">
-                            Pedir Agora
+                        <button 
+                            onClick={onActionClick}
+                            className="bg-primary hover:bg-orange-600 text-white px-8 py-4 rounded-xl font-bold text-lg transition-all flex items-center justify-center gap-2 group"
+                        >
+                            {isSuspended ? "Saber Mais" : "Pedir Agora"}
                             <ArrowRight className="group-hover:translate-x-1 transition-transform" />
-                        </a>
+                        </button>
                     </div>
                 </motion.div>
             </div>

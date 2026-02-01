@@ -13,9 +13,10 @@ interface ShirtCardProps {
     description: string;
     price: number;
     onBuy: () => void;
+    isSuspended?: boolean;
 }
 
-export function ShirtCard({ title, variations = [], description, price, onBuy }: ShirtCardProps) {
+export function ShirtCard({ title, variations = [], description, price, onBuy, isSuspended }: ShirtCardProps) {
     const [selectedColor, setSelectedColor] = useState(variations[0]?.id || '');
     const [currentImageIndex, setCurrentImageIndex] = useState(0);
     const [isHovering, setIsHovering] = useState(false);
@@ -35,20 +36,22 @@ export function ShirtCard({ title, variations = [], description, price, onBuy }:
 
         return () => clearInterval(interval);
     }, [images.length, isAutoPlaying, isHovering]);
-
     const handleNext = useCallback((e: React.MouseEvent) => {
         e.stopPropagation();
         setIsAutoPlaying(false);
+        if (isSuspended) return;
         setCurrentImageIndex((prev) => (prev + 1) % images.length);
-    }, [images.length]);
+    }, [images.length, isSuspended]);
 
     const handlePrev = useCallback((e: React.MouseEvent) => {
         e.stopPropagation();
         setIsAutoPlaying(false);
+        if (isSuspended) return;
         setCurrentImageIndex((prev) => (prev === 0 ? images.length - 1 : prev - 1));
-    }, [images.length]);
+    }, [images.length, isSuspended]);
 
     const handleColorChange = (colorId: string) => {
+        if (isSuspended) return;
         setSelectedColor(colorId);
         setCurrentImageIndex(0);
         setIsAutoPlaying(true);
@@ -59,9 +62,17 @@ export function ShirtCard({ title, variations = [], description, price, onBuy }:
             whileHover={{ y: -5 }}
             onMouseEnter={() => setIsHovering(true)}
             onMouseLeave={() => setIsHovering(false)}
-            className="bg-zinc-900 rounded-[2.5rem] overflow-hidden shadow-2xl border border-zinc-800/50 flex flex-col h-full group/card relative"
+            onClick={isSuspended ? onBuy : undefined}
+            className={`bg-zinc-900 rounded-[2.5rem] overflow-hidden shadow-2xl border border-zinc-800/50 flex flex-col h-full group/card relative ${isSuspended ? 'cursor-pointer' : ''}`}
         >
             <div className="relative h-[24rem] overflow-hidden group">
+                {isSuspended && (
+                    <div className="absolute inset-0 z-40 bg-black/40 backdrop-blur-[2px] flex items-center justify-center">
+                        <div className="bg-zinc-900/90 border border-white/10 px-6 py-3 rounded-2xl shadow-2xl transform -rotate-12">
+                            <span className="text-red-500 font-black uppercase tracking-[0.2em] text-sm">Vendas Offline</span>
+                        </div>
+                    </div>
+                )}
                 <AnimatePresence mode="wait">
                     <motion.img 
                         key={`${selectedColor}-${currentImageIndex}`}
@@ -166,10 +177,14 @@ export function ShirtCard({ title, variations = [], description, price, onBuy }:
                     </div>
                     <button 
                         onClick={onBuy}
-                        className="flex items-center gap-2 bg-primary text-white px-6 md:px-8 py-4 rounded-2xl font-black hover:bg-orange-600 transition-all active:scale-95 shadow-xl shadow-primary/20 text-sm md:text-base"
+                        className={`flex items-center gap-2 px-6 md:px-8 py-4 rounded-2xl font-black transition-all shadow-xl text-sm md:text-base ${
+                            isSuspended 
+                            ? 'bg-zinc-800 text-zinc-500 cursor-pointer hover:bg-zinc-700' 
+                            : 'bg-primary text-white hover:bg-orange-600 active:scale-95 shadow-primary/20'
+                        }`}
                     >
                         <ShoppingBag size={20} />
-                        Garantir Agora
+                        {isSuspended ? 'Indisponível' : 'Garantir Agora'}
                     </button>
                 </div>
             </div>
