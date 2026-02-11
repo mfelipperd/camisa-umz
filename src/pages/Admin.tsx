@@ -715,8 +715,15 @@ export function AdminPage() {
                         </div>
 
                         <div className="overflow-auto flex-1 custom-scrollbar px-1">
-                            {/* Desktop Table View */}
-                            <div className="hidden md:block">
+                            {loading ? (
+                                <div className="py-20 text-center">
+                                    <div className="animate-spin w-8 h-8 border-4 border-zinc-700 border-t-white rounded-full mx-auto mb-4"></div>
+                                    <p className="text-zinc-500 font-bold">Buscando pedidos...</p>
+                                </div>
+                            ) : (
+                                <>
+                                    {/* Desktop Table View */}
+                                    <div className="hidden md:block">
                                 <table className="w-full">
                                     <thead className="bg-zinc-800/50 sticky top-0">
                                         <tr>
@@ -733,7 +740,6 @@ export function AdminPage() {
                                     <tbody className="divide-y divide-zinc-800">
                                         {orders
                                             .filter(o => o.batchId === selectedBatch.batchId)
-                                            .filter(o => o.status === 'approved' || o.status === 'delivered')
                                             .filter(o => o.name.toLowerCase().includes(searchTerm.toLowerCase()))
                                             .map((order) => (
                                                 <Fragment key={order.id}>
@@ -844,7 +850,6 @@ export function AdminPage() {
                             <div className="md:hidden space-y-4 pt-2">
                                 {orders
                                     .filter(o => o.batchId === selectedBatch.batchId)
-                                    .filter(o => o.status === 'approved' || o.status === 'delivered')
                                     .filter(o => o.name.toLowerCase().includes(searchTerm.toLowerCase()))
                                     .map((order) => (
                                         <div key={order.id} className="bg-zinc-800/40 border border-zinc-700/50 rounded-2xl p-4 space-y-4">
@@ -936,7 +941,9 @@ export function AdminPage() {
                                         <p className="text-zinc-500 font-bold">Nenhum pedido encontrado</p>
                                     </div>
                                 )}
-                            </div>
+                                </div>
+                                </>
+                            )}
                         </div>
 
                         <div className="mt-4 pt-4 border-t border-zinc-800">

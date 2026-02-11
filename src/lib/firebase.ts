@@ -20,8 +20,11 @@ export let appCheck: any = null;
 
 if (typeof window !== 'undefined') {
     try {
-        // @ts-ignore
-        self.FIREBASE_APPCHECK_DEBUG_TOKEN = import.meta.env.DEV;
+        if (import.meta.env.DEV) {
+            // @ts-ignore
+            self.FIREBASE_APPCHECK_DEBUG_TOKEN = true;
+            console.log('App Check: Debug Mode enabled. Note: Use the token below in Firebase Console if needed.');
+        }
         appCheck = initializeAppCheck(app, {
             provider: new ReCaptchaEnterpriseProvider('6LdD67sqAAAAANh6x-y8bY0j5_F5u_lX0l-O9QyI'),
             isTokenAutoRefreshEnabled: true
@@ -29,7 +32,6 @@ if (typeof window !== 'undefined') {
         console.log('App Check initialized successfully');
     } catch (error) {
         console.warn('App Check initialization failed:', error);
-        console.warn('Continuing without App Check. Security relies on admin code validation.');
         appCheck = null;
     }
 }

@@ -53,8 +53,15 @@ export function useAllOrders() {
             if (Array.isArray(data)) {
                 setOrders(data);
             }
-        } catch (error) {
+        } catch (error: any) {
             console.error("Error fetching all orders via API:", error);
+            if (error instanceof TypeError && error.message === 'Failed to fetch') {
+                console.warn("Possible CORS or network error. Verify if Cloud Functions are deployed and allow origin http://localhost:5173");
+            }
+            if (sessionStorage.getItem('admin_auth')) {
+                // Only alert on critical failures that prevent usage
+                // alert("Erro ao carregar pedidos. Verifique sua conexão ou o código de admin.");
+            }
         } finally {
             setLoading(false);
         }

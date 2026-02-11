@@ -8,7 +8,10 @@ import { CloudTasksClient } from "@google-cloud/tasks";
 
 admin.initializeApp();
 const db = admin.firestore();
-const corsHandler = cors({ origin: true });
+const corsHandler = cors({ 
+    origin: true,
+    allowedHeaders: ["Content-Type", "Authorization", "X-Firebase-AppCheck"]
+});
 
 // We will initialize the client inside the functions to ensure secrets are loaded
 let client: MercadoPagoConfig;
