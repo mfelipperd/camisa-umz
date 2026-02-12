@@ -41,7 +41,8 @@ export function useAllOrders() {
                 console.warn("Failed to get App Check token:", err);
             }
 
-            const response = await fetch('https://us-central1-camisa-umz.cloudfunctions.net/getAdminOrders', {
+            const apiUrl = 'https://us-central1-camisa-umz.cloudfunctions.net/getAdminOrders';
+            const response = await fetch(apiUrl, {
                 method: 'POST',
                 headers: { 
                     'Content-Type': 'application/json',
@@ -49,18 +50,40 @@ export function useAllOrders() {
                 },
                 body: JSON.stringify({ adminCode })
             });
+
+            if (!response.ok) {
+                throw new Error(`API returned ${response.status}`);
+            }
+
             const data = await response.json();
             if (Array.isArray(data)) {
                 setOrders(data);
+                return; // Success
             }
         } catch (error: any) {
-            console.error("Error fetching all orders via API:", error);
-            if (error instanceof TypeError && error.message === 'Failed to fetch') {
-                console.warn("Possible CORS or network error. Verify if Cloud Functions are deployed and allow origin http://localhost:5173");
-            }
-            if (sessionStorage.getItem('admin_auth')) {
-                // Only alert on critical failures that prevent usage
-                // alert("Erro ao carregar pedidos. Verifique sua conexão ou o código de admin.");
+            console.error("Error fetching orders via API, trying Firestore fallback:", error);
+            
+            // Fallback: Direct Firestore query for public-readable orders (approved/delivered)
+            try {
+                const { collection, query, where, getDocs, orderBy } = await import('firebase/firestore');
+                const { db } = await import('../lib/firebase');
+                
+                const q = query(
+                    collection(db, "orders"),
+                    where("status", "in", ["approved", "delivered"]),
+                    orderBy("createdAt", "desc")
+                );
+                
+                const snapshot = await getDocs(q);
+                const fallbackOrders = snapshot.docs.map(doc => ({
+                    id: doc.id,
+                    ...doc.data()
+                } as AdminOrder));
+                
+                console.log(`Firestore fallback successful: found ${fallbackOrders.length} orders`);
+                setOrders(fallbackOrders);
+            } catch (fallbackError) {
+                console.error("Firestore fallback also failed:", fallbackError);
             }
         } finally {
             setLoading(false);

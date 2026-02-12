@@ -2,13 +2,17 @@
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.checkPaymentStatus = exports.scheduleVerification = exports.verifyPaymentTask = exports.updateAdminOrder = exports.getAdminOrders = exports.completeBatch = exports.webhook = exports.processPayment = exports.createOrderPreference = void 0;
 const functions = require("firebase-functions");
+const firestore_1 = require("firebase-functions/v2/firestore");
 const admin = require("firebase-admin");
 const mercadopago_1 = require("mercadopago");
 const cors = require("cors");
 const tasks_1 = require("@google-cloud/tasks");
 admin.initializeApp();
 const db = admin.firestore();
-const corsHandler = cors({ origin: true });
+const corsHandler = cors({
+    origin: true,
+    allowedHeaders: ["Content-Type", "Authorization", "X-Firebase-AppCheck"]
+});
 // We will initialize the client inside the functions to ensure secrets are loaded
 let client;
 const ADMIN_CODE = process.env.ADMIN_CODE || "umz2024admin";
@@ -31,9 +35,7 @@ const verifyAppCheck = async (req) => {
         return false;
     }
 };
-exports.createOrderPreference = functions.runWith({
-    secrets: ["MP_ACCESS_TOKEN", "ADMIN_CODE"]
-}).https.onRequest(async (req, res) => {
+exports.createOrderPreference = functions.https.onRequest(async (req, res) => {
     corsHandler(req, res, async () => {
         // In dev mode or while fixing keys, we only log a warning instead of blocking
         const isAppCheckValid = await verifyAppCheck(req);
@@ -80,9 +82,7 @@ exports.createOrderPreference = functions.runWith({
         }
     });
 });
-exports.processPayment = functions.runWith({
-    secrets: ["MP_ACCESS_TOKEN"]
-}).https.onRequest(async (req, res) => {
+exports.processPayment = functions.https.onRequest(async (req, res) => {
     corsHandler(req, res, async () => {
         var _a, _b, _c, _d, _e, _f;
         const isAppCheckValid = await verifyAppCheck(req);
@@ -159,9 +159,7 @@ exports.processPayment = functions.runWith({
         }
     });
 });
-exports.webhook = functions.runWith({
-    secrets: ["MP_ACCESS_TOKEN"]
-}).https.onRequest(async (req, res) => {
+exports.webhook = functions.https.onRequest(async (req, res) => {
     client = new mercadopago_1.default({
         accessToken: process.env.MP_ACCESS_TOKEN,
         options: { timeout: 5000 }
@@ -222,9 +220,7 @@ exports.webhook = functions.runWith({
     }
 });
 // Complete current batch and start a new one
-exports.completeBatch = functions.runWith({
-    secrets: ["ADMIN_CODE"]
-}).https.onRequest(async (req, res) => {
+exports.completeBatch = functions.https.onRequest(async (req, res) => {
     corsHandler(req, res, async () => {
         var _a;
         // App Check verification
@@ -314,9 +310,7 @@ exports.completeBatch = functions.runWith({
     });
 });
 // Admin-only functions to bypass tightened Firestore rules
-exports.getAdminOrders = functions.runWith({
-    secrets: ["ADMIN_CODE"]
-}).https.onRequest(async (req, res) => {
+exports.getAdminOrders = functions.https.onRequest(async (req, res) => {
     corsHandler(req, res, async () => {
         const isAppCheckValid = await verifyAppCheck(req);
         if (!isAppCheckValid) {
@@ -338,9 +332,7 @@ exports.getAdminOrders = functions.runWith({
         }
     });
 });
-exports.updateAdminOrder = functions.runWith({
-    secrets: ["ADMIN_CODE"]
-}).https.onRequest(async (req, res) => {
+exports.updateAdminOrder = functions.https.onRequest(async (req, res) => {
     corsHandler(req, res, async () => {
         const isAppCheckValid = await verifyAppCheck(req);
         if (!isAppCheckValid) {
@@ -414,9 +406,7 @@ const verifyOrderPayment = async (orderId, paymentId, existingClient) => {
     }
 };
 // WORKER: Cloud Task Handler
-exports.verifyPaymentTask = functions.runWith({
-    secrets: ["MP_ACCESS_TOKEN"]
-}).https.onRequest(async (req, res) => {
+exports.verifyPaymentTask = functions.https.onRequest(async (req, res) => {
     // Verify request comes from Cloud Tasks (OIDC) or has specific header
     // Ideally use validateCloudTasksRequest(req) but for now checking existence of payload
     try {
@@ -435,11 +425,12 @@ exports.verifyPaymentTask = functions.runWith({
     }
 });
 // DISPATCHER: Schedule verification when Pix order is created
-exports.scheduleVerification = functions.runWith({
-    secrets: ["MP_ACCESS_TOKEN"] // Needed if we verify immediately, but here we just schedule
-}).firestore.document('orders/{orderId}').onCreate(async (snap, context) => {
-    const order = snap.data();
-    const orderId = context.params.orderId;
+exports.scheduleVerification = (0, firestore_1.onDocumentCreated)('orders/{orderId}', async (event) => {
+    var _a;
+    const order = (_a = event.data) === null || _a === void 0 ? void 0 : _a.data();
+    if (!order)
+        return;
+    const orderId = event.params.orderId;
     // Check if it's a Pix pending order with paymentId
     // Note: Adjust logic if paymentMethod is stored differently. 
     // Assuming paymentId exists implies it's a MP payment.
@@ -480,9 +471,7 @@ exports.scheduleVerification = functions.runWith({
     }
 });
 // Modified checkPaymentStatus to use helper
-exports.checkPaymentStatus = functions.runWith({
-    secrets: ["MP_ACCESS_TOKEN", "ADMIN_CODE"]
-}).https.onRequest(async (req, res) => {
+exports.checkPaymentStatus = functions.https.onRequest(async (req, res) => {
     corsHandler(req, res, async () => {
         // ... (App Check skipped for brevity in this replace, assume existing validation needed)
         try {

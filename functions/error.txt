@@ -1,0 +1,3 @@
+src/index.ts(476,57): error TS2339: Property 'document' does not exist on type 'typeof import("C:/Users/felip/Projetos/camisa-umz/functions/node_modules/firebase-functions/lib/v2/providers/firestore")'.
+src/index.ts(476,102): error TS7006: Parameter 'snap' implicitly has an 'any' type.
+src/index.ts(476,108): error TS7006: Parameter 'context' implicitly has an 'any' type.

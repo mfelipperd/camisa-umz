@@ -1,4 +1,5 @@
 import * as functions from "firebase-functions";
+import { onDocumentCreated } from "firebase-functions/v2/firestore";
 import * as admin from "firebase-admin";
 import MercadoPagoConfig, { Preference, Payment } from "mercadopago";
 import * as cors from "cors";
@@ -38,9 +39,7 @@ const verifyAppCheck = async (req: functions.https.Request) => {
     }
 };
 
-export const createOrderPreference = functions.runWith({ 
-    secrets: ["MP_ACCESS_TOKEN", "ADMIN_CODE"] 
-}).https.onRequest(async (req, res) => {
+export const createOrderPreference = functions.https.onRequest(async (req, res) => {
   corsHandler(req, res, async () => {
     // In dev mode or while fixing keys, we only log a warning instead of blocking
     const isAppCheckValid = await verifyAppCheck(req);
@@ -94,9 +93,7 @@ export const createOrderPreference = functions.runWith({
   });
 });
 
-export const processPayment = functions.runWith({ 
-    secrets: ["MP_ACCESS_TOKEN"] 
-}).https.onRequest(async (req, res) => {
+export const processPayment = functions.https.onRequest(async (req, res) => {
     corsHandler(req, res, async () => {
         const isAppCheckValid = await verifyAppCheck(req);
         if (!isAppCheckValid) {
@@ -181,9 +178,7 @@ export const processPayment = functions.runWith({
     });
 });
 
-export const webhook = functions.runWith({ 
-    secrets: ["MP_ACCESS_TOKEN"] 
-}).https.onRequest(async (req, res) => {
+export const webhook = functions.https.onRequest(async (req, res) => {
     client = new MercadoPagoConfig({ 
         accessToken: process.env.MP_ACCESS_TOKEN!, 
         options: { timeout: 5000 } 
@@ -245,9 +240,7 @@ export const webhook = functions.runWith({
 });
 
 // Complete current batch and start a new one
-export const completeBatch = functions.runWith({ 
-    secrets: ["ADMIN_CODE"] 
-}).https.onRequest(async (req, res) => {
+export const completeBatch = functions.https.onRequest(async (req, res) => {
     corsHandler(req, res, async () => {
         // App Check verification
         if (!(await verifyAppCheck(req))) {
@@ -351,9 +344,7 @@ export const completeBatch = functions.runWith({
 });
 
 // Admin-only functions to bypass tightened Firestore rules
-export const getAdminOrders = functions.runWith({ 
-    secrets: ["ADMIN_CODE"] 
-}).https.onRequest(async (req, res) => {
+export const getAdminOrders = functions.https.onRequest(async (req, res) => {
     corsHandler(req, res, async () => {
         const isAppCheckValid = await verifyAppCheck(req);
         if (!isAppCheckValid) {
@@ -376,9 +367,7 @@ export const getAdminOrders = functions.runWith({
     });
 });
 
-export const updateAdminOrder = functions.runWith({ 
-    secrets: ["ADMIN_CODE"] 
-}).https.onRequest(async (req, res) => {
+export const updateAdminOrder = functions.https.onRequest(async (req, res) => {
     corsHandler(req, res, async () => {
         const isAppCheckValid = await verifyAppCheck(req);
         if (!isAppCheckValid) {
@@ -463,9 +452,7 @@ const verifyOrderPayment = async (orderId: string, paymentId: string, existingCl
 };
 
 // WORKER: Cloud Task Handler
-export const verifyPaymentTask = functions.runWith({ 
-    secrets: ["MP_ACCESS_TOKEN"] 
-}).https.onRequest(async (req, res) => {
+export const verifyPaymentTask = functions.https.onRequest(async (req, res) => {
     // Verify request comes from Cloud Tasks (OIDC) or has specific header
     // Ideally use validateCloudTasksRequest(req) but for now checking existence of payload
     try {
@@ -487,11 +474,10 @@ export const verifyPaymentTask = functions.runWith({
 });
 
 // DISPATCHER: Schedule verification when Pix order is created
-export const scheduleVerification = functions.runWith({
-    secrets: ["MP_ACCESS_TOKEN"] // Needed if we verify immediately, but here we just schedule
-}).firestore.document('orders/{orderId}').onCreate(async (snap, context) => {
-    const order = snap.data();
-    const orderId = context.params.orderId;
+export const scheduleVerification = onDocumentCreated('orders/{orderId}', async (event) => {
+    const order = event.data?.data();
+    if (!order) return;
+    const orderId = event.params.orderId;
 
     // Check if it's a Pix pending order with paymentId
     // Note: Adjust logic if paymentMethod is stored differently. 
@@ -539,9 +525,7 @@ export const scheduleVerification = functions.runWith({
 });
 
 // Modified checkPaymentStatus to use helper
-export const checkPaymentStatus = functions.runWith({ 
-    secrets: ["MP_ACCESS_TOKEN", "ADMIN_CODE"] 
-}).https.onRequest(async (req, res) => {
+export const checkPaymentStatus = functions.https.onRequest(async (req, res) => {
     corsHandler(req, res, async () => {
         // ... (App Check skipped for brevity in this replace, assume existing validation needed)
         

@@ -1,0 +1,13 @@
+
+[1m[37m===[39m Deploying to 'camisa-umz'...[22m
+
+[36m[1mi [22m[39m deploying [1mstorage, firestore, functions, hosting[22m
+Running command: npm --prefix "$RESOURCE_DIR" run build
+
+> build
+> tsc
+
+[32m[1m+ [22m[39m [32m[1mfunctions:[22m[39m Finished running [1mpredeploy[22m script.
+[36m[1mi  storage:[22m[39m ensuring required API [1mfirebasestorage.googleapis.com[22m is enabled...
+
+[1m[31mError:[39m[22m Firebase Storage has not been set up on project '[1mcamisa-umz[22m'. Go to https://console.firebase.google.com/project/camisa-umz/storage and click 'Get Started' to set up Firebase Storage.

@@ -1,10 +1,12 @@
-import React, { useState, useEffect, Fragment } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useAllOrders, type AdminOrder } from '../hooks/useAllOrders';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Lock, Package, DollarSign, Users, CheckCircle, Clock, XCircle, LogOut, History, Send, Truck, Edit2, Save, X } from 'lucide-react';
 import { db, appCheck } from '../lib/firebase';
 import { getToken } from 'firebase/app-check';
-import { doc, collection, query, orderBy, onSnapshot, serverTimestamp } from 'firebase/firestore';
+import { doc, collection, query, orderBy, onSnapshot, serverTimestamp, where, getDocs, getDoc } from 'firebase/firestore';
+import jsPDF from 'jspdf';
+import autoTable from 'jspdf-autotable';
 
 const ADMIN_CODE = import.meta.env.VITE_ADMIN_CODE || 'admin123';
 
@@ -15,24 +17,24 @@ interface Batch {
     totalOrders: number;
     totalQuantity: number;
     totalRevenue: number;
+    orderIds?: string[];
 }
 
 export function AdminPage() {
     const [isAuthenticated, setIsAuthenticated] = useState(false);
     const [inputCode, setInputCode] = useState('');
     const [error, setError] = useState('');
-    const [activeTab, setActiveTab] = useState<'current' | 'history'>('current');
+    const [activeView, setActiveView] = useState<'current' | 'history' | 'batch_details'>('current');
     const [currentBatchId, setCurrentBatchId] = useState<string>('batch_1');
     const [batches, setBatches] = useState<Batch[]>([]);
     const [isCompleting, setIsCompleting] = useState(false);
     const [showConfirmModal, setShowConfirmModal] = useState(false);
     const [selectedBatch, setSelectedBatch] = useState<Batch | null>(null);
-    const [deliveringOrderId, setDeliveringOrderId] = useState<string | null>(null);
-    const [confirmingOrderId, setConfirmingOrderId] = useState<string | null>(null);
-    const [expandedOrderId, setExpandedOrderId] = useState<string | null>(null);
     const [searchTerm, setSearchTerm] = useState('');
     const [copied, setCopied] = useState(false);
     const [editingOrder, setEditingOrder] = useState<AdminOrder | null>(null);
+    const [batchOrders, setBatchOrders] = useState<AdminOrder[]>([]);
+    const [isBatchLoading, setIsBatchLoading] = useState(false);
     const { orders, loading, updateOrder } = useAllOrders();
 
     // Filter orders by current batch (only show orders with matching batchId) and valid status
@@ -126,6 +128,105 @@ export function AdminPage() {
         });
         return () => unsubscribe();
     }, []);
+    
+    // Fetch orders for the selected historical batch
+    useEffect(() => {
+        if (activeView !== 'batch_details' || !selectedBatch) {
+            setBatchOrders([]);
+            return;
+        }
+
+        const fetchBatchOrders = async () => {
+            setIsBatchLoading(true);
+            try {
+                // Fetch ALL approved/delivered orders (allowed by rules)
+                // Filter locally to ensure we catch orders even if batchId field is missing/corrupt
+                const q = query(
+                    collection(db, "orders"),
+                    where("status", "in", ["approved", "delivered"])
+                );
+                
+                const snapshot = await getDocs(q);
+                const allApproved = snapshot.docs.map(doc => ({
+                    id: doc.id,
+                    ...doc.data()
+                } as AdminOrder));
+                
+                // Sort locally since we removed orderBy to avoid index requirements
+                allApproved.sort((a, b) => {
+                    const dateA = a.createdAt?.toDate?.() || new Date(a.createdAt);
+                    const dateB = b.createdAt?.toDate?.() || new Date(b.createdAt);
+                    return dateB.getTime() - dateA.getTime(); // Use getTime() for date comparison
+                });
+                
+                // Robust filter: ensure everything is string and trimmed
+                const targetBatchId = selectedBatch.batchId.trim().toLowerCase();
+                console.log("FETCH DEBUG:", {
+                    targetBatchId,
+                    dbCount: allApproved.length,
+                    batchIdsCount: selectedBatch.orderIds?.length,
+                    firstDbId: allApproved[0]?.id,
+                    firstBatchId: selectedBatch.orderIds?.[0]
+                });
+
+                // Robust filter: ensure everything is string and trimmed
+                const batchIdSet = new Set((selectedBatch.orderIds || []).map(id => String(id).trim()));
+                
+                const filtered = allApproved.filter(o => {
+                    const cleanId = String(o.id).trim();
+                    const cleanBatchId = String(o.batchId || '').trim().toLowerCase();
+                    
+                    const matchesBatchId = cleanBatchId === targetBatchId;
+                    const matchesOrderId = batchIdSet.has(cleanId);
+                    
+                    return matchesBatchId || matchesOrderId;
+                });
+
+                console.log(`Filtered count: ${filtered.length}`);
+
+                if (filtered.length === 0 && selectedBatch.orderIds && selectedBatch.orderIds.length > 0) {
+                    console.log("Empty results, trying individual ID fetch fallback...");
+                    try {
+                        const individualOrders: AdminOrder[] = [];
+                        // Fetch in chunks to avoid blocking too much
+                        for (const id of selectedBatch.orderIds) {
+                            const orderDoc = await getDoc(doc(db, "orders", id));
+                            if (orderDoc.exists()) {
+                                individualOrders.push({
+                                    id: orderDoc.id,
+                                    ...orderDoc.data()
+                                } as AdminOrder);
+                            }
+                        }
+                        if (individualOrders.length > 0) {
+                            console.log(`Individual fetch successful: found ${individualOrders.length} orders`);
+                            // Sort locally
+                            individualOrders.sort((a, b) => (a.name || '').localeCompare(b.name || ''));
+                            setBatchOrders(individualOrders);
+                            return; // Stop here
+                        }
+                    } catch (idFetchError) {
+                        console.error("Individual ID fetch failed:", idFetchError);
+                    }
+                }
+
+                // Sort and set: Handle undefined names to prevent crashes
+                filtered.sort((a, b) => (a.name || '').localeCompare(b.name || ''));
+                setBatchOrders(filtered);
+                
+                // Log for debugging if still empty
+                if (filtered.length === 0) {
+                    console.warn(`No orders found for batch ${selectedBatch.batchId}.`);
+                }
+            } catch (err: any) {
+                console.error("Error fetching batch orders:", err);
+            } finally {
+                setIsBatchLoading(false);
+            }
+        };
+
+        fetchBatchOrders();
+    }, [selectedBatch]);
 
     const handleLogin = (e: React.FormEvent) => {
         e.preventDefault();
@@ -224,21 +325,70 @@ export function AdminPage() {
         }
     };
 
-    const handleMarkAsDelivered = async (orderId: string) => {
-        setDeliveringOrderId(orderId);
+
+    const handleStatusUpdate = async (orderId: string, newStatus: AdminOrder['status']) => {
         try {
-            await updateOrder(orderId, {
-                status: 'delivered',
-                deliveredAt: serverTimestamp()
+            await updateOrder(orderId, { 
+                status: newStatus,
+                deliveredAt: newStatus === 'delivered' ? serverTimestamp() : undefined
             });
-            setExpandedOrderId(orderId);
-            // Hide confirmation after 3 seconds
-            setTimeout(() => setExpandedOrderId(null), 3000);
         } catch (error) {
-            console.error("Error updating delivery status:", error);
-            alert("Erro ao confirmar entrega");
-        } finally {
-            setDeliveringOrderId(null);
+            console.error("Error updating order status:", error);
+            alert("Erro ao atualizar status do pedido.");
+        }
+    };
+
+    const handleExportPDF = (batch: Batch, orders: AdminOrder[]) => {
+        try {
+            const doc = new jsPDF();
+            
+            // Header
+            doc.setFontSize(18);
+            doc.text(`Relatório de Entrega - ${batch.batchId}`, 14, 20);
+            
+            doc.setFontSize(10);
+            doc.setTextColor(100);
+            
+            let dateStr = 'N/A';
+            if (batch.completedAt?.toDate) {
+                dateStr = batch.completedAt.toDate().toLocaleDateString('pt-BR');
+            } else if (batch.completedAt instanceof Date) {
+                dateStr = batch.completedAt.toLocaleDateString('pt-BR');
+            }
+
+            doc.text(`Data do Lote: ${dateStr}`, 14, 28);
+            doc.text(`Total de Pedidos: ${orders.length}`, 14, 33);
+            
+            // Table Data
+            const tableColumn = ["Nome", "Modelo", "Tam", "Cor", "Status", "Valor", "Retirado em / Assinatura"];
+            const tableRows = orders.map(order => [
+                order.name || 'N/A',
+                order.model || 'N/A',
+                order.size || 'N/A',
+                order.color || 'N/A',
+                order.status === 'delivered' ? 'Entregue' : 'Pendente',
+                `R$ ${(order.price || 0).toFixed(2)}`,
+                "____/____ [ ]" // Placeholder for manual marking
+            ]);
+
+            // Generate Table
+            autoTable(doc, {
+                head: [tableColumn],
+                body: tableRows,
+                startY: 40,
+                theme: 'striped',
+                headStyles: { fillColor: [40, 40, 40] },
+                styles: { fontSize: 8, cellPadding: 3 },
+                columnStyles: {
+                    6: { cellWidth: 40 } // Signature column wider
+                }
+            });
+
+            // Save
+            doc.save(`Entrega_${batch.batchId}.pdf`);
+        } catch (error) {
+            console.error("PDF Generation failed!", error);
+            alert("Erro ao gerar PDF: " + (error instanceof Error ? error.message : String(error)));
         }
     };
 
@@ -393,31 +543,29 @@ export function AdminPage() {
             <main className="max-w-7xl mx-auto p-4 md:p-6 pb-24 md:pb-6">
                 {/* Tabs */}
                 <div className="flex bg-zinc-900/50 p-1 rounded-xl border border-zinc-800 mb-6 w-full sm:w-fit">
-                    <button
-                        onClick={() => setActiveTab('current')}
-                        className={`flex-1 sm:flex-none px-4 md:px-6 py-2 rounded-lg font-bold text-xs md:text-sm transition-all duration-200 ${
-                            activeTab === 'current' 
-                                ? 'bg-white text-zinc-950 shadow-lg' 
-                                : 'text-zinc-500 hover:text-zinc-300'
-                        }`}
-                    >
-                        <Package size={16} className="inline mr-2" />
-                        Lote Atual
-                    </button>
-                    <button
-                        onClick={() => setActiveTab('history')}
-                        className={`flex-1 sm:flex-none px-4 md:px-6 py-2 rounded-lg font-bold text-xs md:text-sm transition-all duration-200 ${
-                            activeTab === 'history' 
-                                ? 'bg-white text-zinc-950 shadow-lg' 
-                                : 'text-zinc-500 hover:text-zinc-300'
-                        }`}
-                    >
-                        <History size={16} className="inline mr-2" />
-                        Histórico
-                    </button>
-                </div>
+                            <button
+                                onClick={() => setActiveView('current')}
+                                className={`flex-1 py-4 text-sm font-medium border-b-2 transition-colors ${
+                                    activeView === 'current'
+                                        ? 'border-white text-white bg-white/5'
+                                        : 'border-transparent text-zinc-500 hover:text-zinc-300'
+                                }`}
+                            >
+                                Lote Atual
+                            </button>
+                            <button
+                                onClick={() => setActiveView('history')}
+                                className={`flex-1 py-4 text-sm font-medium border-b-2 transition-colors ${
+                                    activeView === 'history'
+                                        ? 'border-white text-white bg-white/5'
+                                        : 'border-transparent text-zinc-500 hover:text-zinc-300'
+                                }`}
+                            >
+                                Histórico
+                            </button>
+                        </div>
 
-                {activeTab === 'current' ? (
+                        {activeView === 'current' && (
                     <>
                         {/* Stats Cards */}
                         <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 md:gap-6 mb-8">
@@ -567,47 +715,184 @@ export function AdminPage() {
                             )}
                         </div>
                     </>
-                ) : (
-                    /* History Tab */
-                    <div className="bg-zinc-900 border border-zinc-800 rounded-xl overflow-hidden">
-                        <div className="px-6 py-4 border-b border-zinc-800">
-                            <h2 className="text-lg font-semibold">Histórico de Lotes</h2>
+                )}
+
+                {activeView === 'history' && (
+                    <div className="space-y-6">
+                        <div className="flex items-center gap-4">
+                            <button 
+                                onClick={() => setActiveView('current')}
+                                className="p-2 hover:bg-zinc-800 rounded-lg text-zinc-400 hover:text-white transition-colors"
+                            >
+                                <X size={20} />
+                            </button>
+                            <h2 className="text-xl font-bold text-white">Histórico de Lotes</h2>
                         </div>
 
-                        {batches.length === 0 ? (
-                            <div className="p-8 text-center text-zinc-400">Nenhum lote finalizado ainda</div>
-                        ) : (
-                            <div className="overflow-x-auto">
+                        <div className="bg-zinc-900 border border-zinc-800 rounded-2xl overflow-hidden shadow-2xl">
+                            {batches.length === 0 ? (
+                                <div className="p-12 text-center">
+                                    <History size={48} className="mx-auto text-zinc-700 mb-4" />
+                                    <p className="text-zinc-500 font-bold">Nenhum lote finalizado ainda</p>
+                                </div>
+                            ) : (
+                                <div className="overflow-x-auto custom-scrollbar">
+                                    <table className="w-full">
+                                        <thead className="bg-zinc-800/50">
+                                            <tr>
+                                                <th className="px-6 py-4 text-left text-xs font-black uppercase tracking-widest text-zinc-500">Lote</th>
+                                                <th className="px-6 py-4 text-left text-xs font-black uppercase tracking-widest text-zinc-500">Data</th>
+                                                <th className="px-6 py-4 text-left text-xs font-black uppercase tracking-widest text-zinc-500">Pedidos</th>
+                                                <th className="px-6 py-4 text-left text-xs font-black uppercase tracking-widest text-zinc-500">Camisas</th>
+                                                <th className="px-6 py-4 text-left text-xs font-black uppercase tracking-widest text-zinc-500">Receita</th>
+                                                <th className="px-6 py-4 text-right text-xs font-black uppercase tracking-widest text-zinc-500">Ações</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody className="divide-y divide-zinc-800">
+                                            {batches.map((batch) => (
+                                                <tr 
+                                                    key={batch.id} 
+                                                    className="hover:bg-zinc-800/30 transition-colors group"
+                                                >
+                                                    <td className="px-6 py-4 text-sm font-bold text-white">{batch.batchId}</td>
+                                                    <td className="px-6 py-4 text-sm text-zinc-400">{batch.completedAt?.toDate ? batch.completedAt.toDate().toLocaleDateString('pt-BR') : 'N/A'}</td>
+                                                    <td className="px-6 py-4 text-sm text-zinc-400">{batch.totalOrders}</td>
+                                                    <td className="px-6 py-4 text-sm text-zinc-400">{batch.totalQuantity}</td>
+                                                    <td className="px-6 py-4 text-sm text-emerald-400 font-bold">
+                                                        R$ {(batch.totalRevenue || 0).toFixed(2)}
+                                                    </td>
+                                                    <td className="px-6 py-4 text-right">
+                                                        <button 
+                                                            onClick={() => {
+                                                                setSelectedBatch(batch);
+                                                                setActiveView('batch_details');
+                                                            }}
+                                                            className="px-4 py-2 bg-zinc-800 hover:bg-zinc-700 text-white text-xs font-bold rounded-lg transition-all group-hover:scale-105"
+                                                        >
+                                                            Detalhes
+                                                        </button>
+                                                    </td>
+                                                </tr>
+                                            ))}
+                                        </tbody>
+                                    </table>
+                                </div>
+                            )}
+                        </div>
+                    </div>
+                )}
+
+                {activeView === 'batch_details' && selectedBatch && (
+                    <div className="space-y-6">
+                        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+                            <div className="flex items-center gap-4">
+                                <button 
+                                    onClick={() => setActiveView('history')}
+                                    className="p-2 hover:bg-zinc-800 rounded-lg text-zinc-400 hover:text-white transition-colors"
+                                >
+                                    <X size={20} />
+                                </button>
+                                <div>
+                                    <h2 className="text-xl font-bold text-white">Pedidos - {selectedBatch.batchId}</h2>
+                                    <p className="text-zinc-500 text-xs font-medium uppercase tracking-wider">
+                                        {selectedBatch.totalOrders} pedidos • {selectedBatch.totalQuantity} camisas • R$ {(selectedBatch.totalRevenue || 0).toFixed(2)}
+                                    </p>
+                                </div>
+                            </div>
+                            <button
+                                onClick={() => handleExportPDF(selectedBatch, batchOrders)}
+                                disabled={isBatchLoading || batchOrders.length === 0}
+                                className="flex items-center justify-center gap-2 px-6 py-3 bg-emerald-600 hover:bg-emerald-700 disabled:opacity-50 text-white font-bold rounded-xl transition-all shadow-lg shadow-emerald-500/20"
+                            >
+                                <Send size={18} />
+                                Exportar PDF de Entrega
+                            </button>
+                        </div>
+
+                        <div className="bg-zinc-900 border border-zinc-800 rounded-2xl p-6 shadow-2xl">
+                            <div className="mb-6">
+                                <div className="relative">
+                                    <input
+                                        type="text"
+                                        placeholder="Pesquisar por nome..."
+                                        value={searchTerm}
+                                        onChange={(e) => setSearchTerm(e.target.value)}
+                                        className="w-full bg-zinc-800 border border-zinc-700 rounded-xl px-4 py-3 text-white placeholder-zinc-500 focus:ring-2 focus:ring-zinc-600 focus:border-transparent outline-none transition-all"
+                                    />
+                                </div>
+                            </div>
+
+                            <div className="overflow-x-auto custom-scrollbar">
                                 <table className="w-full">
-                                    <thead className="bg-zinc-800/50">
+                                    <thead className="bg-zinc-800/50 sticky top-0">
                                         <tr>
-                                            <th className="px-4 py-3 text-left text-xs font-medium text-zinc-400 uppercase">Lote</th>
-                                            <th className="px-4 py-3 text-left text-xs font-medium text-zinc-400 uppercase">Data</th>
-                                            <th className="px-4 py-3 text-left text-xs font-medium text-zinc-400 uppercase">Pedidos</th>
-                                            <th className="px-4 py-3 text-left text-xs font-medium text-zinc-400 uppercase">Camisas</th>
-                                            <th className="px-4 py-3 text-left text-xs font-medium text-zinc-400 uppercase">Receita</th>
+                                            <th className="px-4 py-3 text-left text-xs font-black uppercase tracking-widest text-zinc-500">Nome</th>
+                                            <th className="px-4 py-3 text-left text-xs font-black uppercase tracking-widest text-zinc-500">Modelo</th>
+                                            <th className="px-4 py-3 text-left text-xs font-black uppercase tracking-widest text-zinc-500">WhatsApp</th>
+                                            <th className="px-4 py-3 text-left text-xs font-black uppercase tracking-widest text-zinc-500">Cor</th>
+                                            <th className="px-4 py-3 text-left text-xs font-black uppercase tracking-widest text-zinc-500">Tamanho</th>
+                                            <th className="px-4 py-3 text-left text-xs font-black uppercase tracking-widest text-zinc-500">Status</th>
+                                            <th className="px-4 py-3 text-left text-xs font-black uppercase tracking-widest text-zinc-500">Valor</th>
+                                            <th className="px-4 py-3 text-right text-xs font-black uppercase tracking-widest text-zinc-500">Ações</th>
                                         </tr>
                                     </thead>
                                     <tbody className="divide-y divide-zinc-800">
-                                        {batches.map((batch) => (
-                                            <tr 
-                                                key={batch.id} 
-                                                className="hover:bg-zinc-800/30 transition-colors cursor-pointer"
-                                                onClick={() => setSelectedBatch(batch)}
-                                            >
-                                                <td className="px-4 py-4 text-sm font-medium text-white">{batch.batchId}</td>
-                                                <td className="px-4 py-4 text-sm text-zinc-300">{formatDate(batch.completedAt)}</td>
-                                                <td className="px-4 py-4 text-sm text-zinc-300">{batch.totalOrders}</td>
-                                                <td className="px-4 py-4 text-sm text-zinc-300">{batch.totalQuantity}</td>
-                                                <td className="px-4 py-4 text-sm text-emerald-400 font-medium">
-                                                    R$ {(batch.totalRevenue || 0).toFixed(2)}
+                                        {isBatchLoading ? (
+                                            <tr>
+                                                <td colSpan={8} className="py-20 text-center">
+                                                    <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-white mx-auto mb-4"></div>
+                                                    <p className="text-zinc-500 font-bold">Carregando pedidos...</p>
                                                 </td>
                                             </tr>
-                                        ))}
+                                        ) : batchOrders.length === 0 ? (
+                                            <tr>
+                                                <td colSpan={8} className="py-20 text-center text-zinc-500 font-bold">
+                                                    Nenhum pedido encontrado neste lote.
+                                                </td>
+                                            </tr>
+                                        ) : (() => {
+                                            const filtered = batchOrders.filter(o => 
+                                                (o.name || '').toLowerCase().includes(searchTerm.toLowerCase())
+                                            );
+                                            return filtered.map((order) => (
+                                                <tr key={order.id} className="hover:bg-zinc-800/30 transition-colors">
+                                                    <td className="py-4 px-4 text-white font-bold">{order.name}</td>
+                                                    <td className="py-4 px-4 text-zinc-400 text-sm">{order.model}</td>
+                                                    <td className="py-4 px-4">
+                                                        {order.phone ? (
+                                                            <a href={`https://wa.me/55${order.phone.replace(/\D/g, '')}`} target="_blank" className="text-emerald-400 hover:underline font-bold text-sm">
+                                                                {order.phone}
+                                                            </a>
+                                                        ) : '-'}
+                                                    </td>
+                                                    <td className="py-4 px-4 text-zinc-400 text-sm capitalize">{order.color}</td>
+                                                    <td className="py-4 px-4 text-zinc-400 text-sm">{order.size} (x{order.quantity})</td>
+                                                    <td className="py-4 px-4 text-sm">
+                                                        <span className={`px-2 py-1 rounded-lg font-black text-[10px] uppercase ${
+                                                            order.status === 'delivered' ? 'bg-emerald-500/20 text-emerald-400' : 'bg-blue-500/20 text-blue-400'
+                                                        }`}>
+                                                            {order.status === 'delivered' ? 'Entregue' : 'Pago'}
+                                                        </span>
+                                                    </td>
+                                                    <td className="py-4 px-4 text-white font-bold text-sm">R$ {(order.price || 0).toFixed(2)}</td>
+                                                    <td className="py-4 px-4 text-right">
+                                                        {order.status === 'approved' && (
+                                                            <button 
+                                                                onClick={() => handleStatusUpdate(order.id, 'delivered')}
+                                                                className="p-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg transition-all"
+                                                                title="Marcar como entregue"
+                                                            >
+                                                                <Truck size={16} />
+                                                            </button>
+                                                        )}
+                                                    </td>
+                                                </tr>
+                                            ));
+                                        })()}
                                     </tbody>
                                 </table>
                             </div>
-                        )}
+                        </div>
                     </div>
                 )}
             </main>
@@ -668,295 +953,6 @@ export function AdminPage() {
                 </div>
             )}
 
-            {/* Batch Detail Modal */}
-            {selectedBatch && (
-                <div className="fixed inset-0 z-50 flex items-center justify-center bg-zinc-950/90 backdrop-blur-sm p-4">
-                    <motion.div
-                        initial={{ opacity: 0, scale: 0.95 }}
-                        animate={{ opacity: 1, scale: 1 }}
-                        className="w-full max-w-4xl bg-zinc-900 border border-zinc-800 rounded-2xl p-6 max-h-[90vh] overflow-hidden flex flex-col"
-                    >
-                        <div className="flex items-center justify-between mb-4">
-                            <div>
-                                <h3 className="text-lg font-bold text-white">Pedidos - {selectedBatch.batchId}</h3>
-                                <p className="text-zinc-400 text-sm">
-                                    {selectedBatch.totalOrders} pedidos • {selectedBatch.totalQuantity} camisas • R$ {(selectedBatch.totalRevenue || 0).toFixed(2)}
-                                </p>
-                            </div>
-                            <button
-                                onClick={() => {
-                                    setSelectedBatch(null);
-                                    setSearchTerm('');
-                                }}
-                                className="text-zinc-400 hover:text-white transition-colors p-2"
-                            >
-                                ✕
-                            </button>
-                        </div>
-
-                        <div className="mb-6">
-                            <div className="relative">
-                                <input
-                                    type="text"
-                                    placeholder="Pesquisar por nome..."
-                                    value={searchTerm}
-                                    onChange={(e) => setSearchTerm(e.target.value)}
-                                    className="w-full bg-zinc-800 border border-zinc-700 rounded-xl px-4 py-2.5 text-sm text-white placeholder-zinc-500 focus:ring-2 focus:ring-zinc-600 focus:border-transparent outline-none transition-all"
-                                />
-                                {searchTerm && (
-                                    <button 
-                                        onClick={() => setSearchTerm('')}
-                                        className="absolute right-3 top-1/2 -translate-y-1/2 text-zinc-500 hover:text-zinc-300"
-                                    >
-                                        ✕
-                                    </button>
-                                )}
-                            </div>
-                        </div>
-
-                        <div className="overflow-auto flex-1 custom-scrollbar px-1">
-                            {loading ? (
-                                <div className="py-20 text-center">
-                                    <div className="animate-spin w-8 h-8 border-4 border-zinc-700 border-t-white rounded-full mx-auto mb-4"></div>
-                                    <p className="text-zinc-500 font-bold">Buscando pedidos...</p>
-                                </div>
-                            ) : (
-                                <>
-                                    {/* Desktop Table View */}
-                                    <div className="hidden md:block">
-                                <table className="w-full">
-                                    <thead className="bg-zinc-800/50 sticky top-0">
-                                        <tr>
-                                            <th className="px-4 py-3 text-left text-xs font-medium text-zinc-400 uppercase">Nome</th>
-                                            <th className="px-4 py-3 text-left text-xs font-medium text-zinc-400 uppercase">Modelo</th>
-                                            <th className="px-4 py-3 text-left text-xs font-medium text-zinc-400 uppercase">WhatsApp</th>
-                                            <th className="px-4 py-3 text-left text-xs font-medium text-zinc-400 uppercase">Cor</th>
-                                            <th className="px-4 py-3 text-left text-xs font-medium text-zinc-400 uppercase">Tamanho</th>
-                                            <th className="px-4 py-3 text-left text-xs font-medium text-zinc-400 uppercase">Status</th>
-                                            <th className="px-4 py-3 text-left text-xs font-medium text-zinc-400 uppercase">Valor</th>
-                                            <th className="px-4 py-3 text-left text-xs font-medium text-zinc-400 uppercase">Ações</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody className="divide-y divide-zinc-800">
-                                        {orders
-                                            .filter(o => o.batchId === selectedBatch.batchId)
-                                            .filter(o => o.name.toLowerCase().includes(searchTerm.toLowerCase()))
-                                            .map((order) => (
-                                                <Fragment key={order.id}>
-                                                    <tr className="hover:bg-zinc-800/30 transition-colors">
-                                                        <td className="px-4 py-4 text-sm font-medium text-white">{order.name}</td>
-                                                        <td className="px-4 py-4 text-sm text-zinc-300">{order.model}</td>
-                                                        <td className="px-4 py-4 text-sm text-zinc-300">
-                                                            {order.phone ? (
-                                                                <a 
-                                                                    href={`https://wa.me/55${order.phone.replace(/\D/g, '')}?text=${encodeURIComponent(`Olá ${order.name.split(' ')[0]}, sua camisa UMZ já está pronta! Pode vir retirar.`)}`}
-                                                                    target="_blank"
-                                                                    rel="noopener noreferrer"
-                                                                    onClick={(e) => e.stopPropagation()}
-                                                                    className="text-emerald-400 hover:text-emerald-300 font-bold underline"
-                                                                >
-                                                                    {order.phone}
-                                                                </a>
-                                                            ) : '-'}
-                                                        </td>
-                                                        <td className="px-4 py-4 text-sm text-zinc-300 capitalize">{order.color || '-'}</td>
-                                                        <td className="px-4 py-4 text-sm text-zinc-300">{order.size} (x{order.quantity})</td>
-                                                        <td className="px-4 py-4">{getStatusBadge(order.status)}</td>
-                                                        <td className="px-4 py-4 text-sm text-zinc-300">
-                                                            R$ {(order.price || 0).toFixed(2)}
-                                                        </td>
-                                                        <td className="px-4 py-4">
-                                                            {order.status === 'pending' && (
-                                                                <button
-                                                                    onClick={(e) => {
-                                                                    e.stopPropagation();
-                                                                    handleCheckStatus(order, e.currentTarget);
-                                                                }}
-                                                                className="px-3 py-1.5 bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold rounded-lg transition-all mr-2"
-                                                            >
-                                                                Verificar
-                                                                </button>
-                                                            )}
-                                                            {order.status === 'approved' && (
-                                                                <div className="flex flex-col gap-2">
-                                                                    {confirmingOrderId === order.id ? (
-                                                                        <div className="flex items-center gap-2">
-                                                                            <button
-                                                                                onClick={() => {
-                                                                                    handleMarkAsDelivered(order.id);
-                                                                                    setConfirmingOrderId(null);
-                                                                                }}
-                                                                                disabled={deliveringOrderId === order.id}
-                                                                                className="px-3 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold rounded-lg transition-all"
-                                                                            >
-                                                                                Confirmar?
-                                                                            </button>
-                                                                            <button
-                                                                                onClick={() => setConfirmingOrderId(null)}
-                                                                                className="px-3 py-1.5 bg-zinc-700 hover:bg-zinc-600 text-zinc-300 text-xs font-medium rounded-lg transition-all"
-                                                                            >
-                                                                                Cancelar
-                                                                            </button>
-                                                                        </div>
-                                                                    ) : (
-                                                                        <button
-                                                                            onClick={() => setConfirmingOrderId(order.id)}
-                                                                            disabled={deliveringOrderId === order.id}
-                                                                            className="flex items-center gap-2 px-3 py-1.5 bg-zinc-800 hover:bg-zinc-700 text-zinc-300 hover:text-white text-xs font-medium rounded-lg border border-zinc-700 transition-all disabled:opacity-50"
-                                                                        >
-                                                                            {deliveringOrderId === order.id ? (
-                                                                                'Processando...'
-                                                                            ) : (
-                                                                                <>
-                                                                                    <Truck size={14} /> Marcar Entregue
-                                                                                </>
-                                                                            )}
-                                                                        </button>
-                                                                    )}
-                                                                </div>
-                                                            )}
-                                                            {order.status === 'delivered' && (
-                                                                <span className="text-xs text-zinc-500 italic">
-                                                                    Entregue em {formatDate(order.deliveredAt)}
-                                                                </span>
-                                                            )}
-                                                        </td>
-                                                    </tr>
-                                                    {/* Expanded row for confirmation */}
-                                                    {expandedOrderId === order.id && (
-                                                        <tr>
-                                                            <td colSpan={8} className="px-4 py-0">
-                                                                <motion.div
-                                                                    initial={{ height: 0, opacity: 0 }}
-                                                                    animate={{ height: 'auto', opacity: 1 }}
-                                                                    exit={{ height: 0, opacity: 0 }}
-                                                                    className="overflow-hidden"
-                                                                >
-                                                                    <div className="py-3 px-4 bg-emerald-500/10 border-x border-b border-emerald-500/20 rounded-b-lg mb-2 flex items-center gap-2 text-emerald-400 text-sm">
-                                                                        <CheckCircle size={16} />
-                                                                        Entrega confirmada com sucesso!
-                                                                    </div>
-                                                                </motion.div>
-                                                            </td>
-                                                        </tr>
-                                                    )}
-                                                </Fragment>
-                                            ))}
-                                    </tbody>
-                                </table>
-                            </div>
-
-                            {/* Mobile Card View */}
-                            <div className="md:hidden space-y-4 pt-2">
-                                {orders
-                                    .filter(o => o.batchId === selectedBatch.batchId)
-                                    .filter(o => o.name.toLowerCase().includes(searchTerm.toLowerCase()))
-                                    .map((order) => (
-                                        <div key={order.id} className="bg-zinc-800/40 border border-zinc-700/50 rounded-2xl p-4 space-y-4">
-                                            <div className="flex justify-between items-start">
-                                                <div className="min-w-0 pr-2">
-                                                    <p className="text-white font-bold truncate">{order.name}</p>
-                                                    <p className="text-zinc-500 text-[10px] font-black uppercase tracking-widest mt-0.5">
-                                                        {order.model} • {order.size} {order.phone && `• ${order.phone}`}
-                                                    </p>
-                                                </div>
-                                                <div className="flex-shrink-0">
-                                                    {getStatusBadge(order.status)}
-                                                </div>
-                                            </div>
-
-                                            <div className="flex justify-between items-center text-sm py-2 border-t border-zinc-700/30">
-                                                <span className="text-zinc-400">Quantidade: <b className="text-white">{order.quantity}</b></span>
-                                                <span className="text-zinc-400">Total: <b className="text-white">R$ {(order.price || 0).toFixed(2)}</b></span>
-                                            </div>
-
-                                            <div className="pt-2">
-                                                {order.status === 'pending' && (
-                                                    <div className="space-y-2 mb-2">
-                                                        <button
-                                                            onClick={(e) => {
-                                                                e.stopPropagation();
-                                                                handleCheckStatus(order, e.currentTarget);
-                                                            }}
-                                                            className="w-full py-3 bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold rounded-xl uppercase tracking-wider shadow-lg shadow-blue-500/20"
-                                                        >
-                                                            Verificar Status
-                                                        </button>
-                                                        {order.paymentId && (
-                                                            <div className="text-center text-[10px] text-zinc-500 flex items-center justify-center gap-1">
-                                                                <Clock size={12} /> Verificação automática agendada para ~10min após pedido
-                                                            </div>
-                                                        )}
-                                                    </div>
-                                                )}
-                                                {order.status === 'approved' && (
-                                                    <div className="w-full">
-                                                        {confirmingOrderId === order.id ? (
-                                                            <div className="grid grid-cols-2 gap-2">
-                                                                <button
-                                                                    onClick={() => {
-                                                                        handleMarkAsDelivered(order.id);
-                                                                        setConfirmingOrderId(null);
-                                                                    }}
-                                                                    disabled={deliveringOrderId === order.id}
-                                                                    className="w-full py-3 bg-emerald-600 text-white text-xs font-black rounded-xl uppercase tracking-wider shadow-lg shadow-emerald-500/20"
-                                                                >
-                                                                    Confirmar
-                                                                </button>
-                                                                <button
-                                                                    onClick={() => setConfirmingOrderId(null)}
-                                                                    className="w-full py-3 bg-zinc-700 text-zinc-300 text-xs font-black rounded-xl uppercase tracking-wider"
-                                                                >
-                                                                    Cancelar
-                                                                </button>
-                                                            </div>
-                                                        ) : (
-                                                            <button
-                                                                onClick={() => setConfirmingOrderId(order.id)}
-                                                                disabled={deliveringOrderId === order.id}
-                                                                className="w-full py-3 bg-zinc-800 text-zinc-300 font-black text-xs rounded-xl border border-zinc-700 flex items-center justify-center gap-2 uppercase tracking-widest active:scale-95 transition-all"
-                                                            >
-                                                                <Truck size={14} className="text-primary" /> Marcar Entregue
-                                                            </button>
-                                                        )}
-                                                    </div>
-                                                )}
-                                                {order.status === 'delivered' && (
-                                                    <div className="bg-emerald-500/5 border border-emerald-500/10 rounded-xl p-3 text-center">
-                                                        <p className="text-[10px] text-zinc-500 italic uppercase font-bold tracking-widest">
-                                                            Entregue em {formatDate(order.deliveredAt)}
-                                                        </p>
-                                                    </div>
-                                                )}
-                                            </div>
-                                        </div>
-                                    ))}
-                                {orders
-                                    .filter(o => o.batchId === selectedBatch.batchId)
-                                    .filter(o => o.name.toLowerCase().includes(searchTerm.toLowerCase())).length === 0 && (
-                                    <div className="py-12 text-center">
-                                        <div className="w-16 h-16 bg-zinc-800/50 rounded-full flex items-center justify-center mx-auto mb-4">
-                                            <Users size={24} className="text-zinc-600" />
-                                        </div>
-                                        <p className="text-zinc-500 font-bold">Nenhum pedido encontrado</p>
-                                    </div>
-                                )}
-                                </div>
-                                </>
-                            )}
-                        </div>
-
-                        <div className="mt-4 pt-4 border-t border-zinc-800">
-                            <button
-                                onClick={() => setSelectedBatch(null)}
-                                className="w-full py-3 bg-zinc-800 text-white font-semibold rounded-lg hover:bg-zinc-700 transition-colors"
-                            >
-                                Fechar
-                            </button>
-                        </div>
-                    </motion.div>
-                </div>
-            )}
             {/* Edit Order Modal */}
             <AnimatePresence>
                 {editingOrder && (
